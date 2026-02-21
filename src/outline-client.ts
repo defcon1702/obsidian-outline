@@ -180,7 +180,6 @@ export class OutlineClient {
 				body: body.buffer,
 				throw: false,
 			});
-			console.log(`[Outline Sync] Storage upload status: ${response.status} (url: ${absoluteUrl.substring(0, 80)})`);
 			return response.status >= 200 && response.status < 300;
 		} catch (e) {
 			console.error("[Outline Sync] Attachment upload exception:", e);

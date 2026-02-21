@@ -39,7 +39,6 @@ async function resolveEmbeddedImages(
 ): Promise<string> {
 	const wikiMatches = [...content.matchAll(EMBEDDED_IMAGE_WIKI_REGEX)];
 	const mdMatches = [...content.matchAll(EMBEDDED_IMAGE_MD_REGEX)];
-	console.log(`[Outline Sync] Image detection – wiki: ${wikiMatches.length}, markdown: ${mdMatches.length}`);
 
 	for (const match of wikiMatches) {
 		const imageName = match[1];
