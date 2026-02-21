@@ -234,10 +234,6 @@ export class PushEngine {
 			new Notice("Outline Sync: Bitte URL und API Key in den Einstellungen konfigurieren.");
 			return false;
 		}
-		if (!this.settings.targetCollectionId) {
-			new Notice("Outline Sync: Bitte eine Ziel-Collection in den Einstellungen wählen.");
-			return false;
-		}
 		return true;
 	}
 }
