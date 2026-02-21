@@ -49,6 +49,25 @@ export class PushEngine {
 				}
 			}
 
+			const duplicate = await this.client.searchDocumentByTitle(title, targetCollection);
+			if (duplicate) {
+				const updated = await this.client.updateDocument({
+					id: duplicate.id,
+					title,
+					text: resolvedMarkdown,
+					publish: true,
+				});
+				if (!updated) throw new Error("Update fehlgeschlagen");
+				await updateOutlineFrontmatter(this.app, file, {
+					outline_id: duplicate.id,
+					outline_collection_id: duplicate.collectionId,
+					outline_last_synced: new Date().toISOString(),
+				});
+				notice.hide();
+				new Notice(`✓ "${title}" aktualisiert (Duplikat gefunden)`);
+				return;
+			}
+
 			const created = await this.client.createDocument({
 				title,
 				text: resolvedMarkdown,
@@ -124,6 +143,25 @@ export class PushEngine {
 						success++;
 						continue;
 					}
+				}
+
+				const duplicate = await this.client.searchDocumentByTitle(title, targetCollection);
+				if (duplicate) {
+					await this.client.updateDocument({
+						id: duplicate.id,
+						title,
+						text: resolvedMarkdown,
+						publish: true,
+					});
+					await updateOutlineFrontmatter(this.app, file, {
+						outline_id: duplicate.id,
+						outline_collection_id: duplicate.collectionId,
+						outline_last_synced: new Date().toISOString(),
+					});
+					const refreshed = await this.app.vault.read(file);
+					fileContentCache.set(file.path, refreshed);
+					success++;
+					continue;
 				}
 
 				const created = await this.client.createDocument({

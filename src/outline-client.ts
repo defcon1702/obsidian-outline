@@ -107,6 +107,19 @@ export class OutlineClient {
 		return result?.data ?? null;
 	}
 
+	async searchDocumentByTitle(title: string, collectionId: string): Promise<OutlineDocument | null> {
+		const result = await this.request<{ data: { document: OutlineDocument }[] }>("documents.search", {
+			query: title,
+			collectionId,
+			limit: 10,
+		});
+		if (!result?.data) return null;
+		const exact = result.data.find(
+			(item) => item.document.title.toLowerCase() === title.toLowerCase()
+		);
+		return exact?.document ?? null;
+	}
+
 	async createAttachment(params: {
 		name: string;
 		contentType: string;
