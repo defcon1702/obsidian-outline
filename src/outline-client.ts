@@ -170,7 +170,7 @@ export class OutlineClient {
 			});
 			return response.status >= 200 && response.status < 300;
 		} catch (e) {
-			console.error("[Outline Sync] Attachment upload failed");
+			console.error("[Outline Sync] Attachment upload exception:", e);
 			return false;
 		}
 	}
