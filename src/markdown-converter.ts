@@ -12,7 +12,8 @@ export interface ConvertResult {
 }
 
 const WIKI_LINK_REGEX = /\[\[([^\]|#]+)(?:#[^\]|]*)?\|?([^\]]*)\]\]/g;
-const EMBEDDED_IMAGE_REGEX = /!\[\[([^\]]+\.(png|jpg|jpeg|gif|webp|svg|bmp))\]\]/gi;
+const EMBEDDED_IMAGE_WIKI_REGEX = /!\[\[([^\]]+\.(png|jpg|jpeg|gif|webp|svg|bmp))\]\]/gi;
+const EMBEDDED_IMAGE_MD_REGEX = /!\[([^\]]*)\]\(([^)]+\.(png|jpg|jpeg|gif|webp|svg|bmp))\)/gi;
 const CALLOUT_REGEX = /^> \[!(\w+)\]([-+]?)[ \t]*(.*)/gm;
 
 export async function convertToOutlineMarkdown(
@@ -36,18 +37,35 @@ async function resolveEmbeddedImages(
 	content: string,
 	images: EmbeddedImage[]
 ): Promise<string> {
-	const matches = [...content.matchAll(EMBEDDED_IMAGE_REGEX)];
+	const wikiMatches = [...content.matchAll(EMBEDDED_IMAGE_WIKI_REGEX)];
+	const mdMatches = [...content.matchAll(EMBEDDED_IMAGE_MD_REGEX)];
+	console.log(`[Outline Sync] Image detection – wiki: ${wikiMatches.length}, markdown: ${mdMatches.length}`);
 
-	for (const match of matches) {
+	for (const match of wikiMatches) {
 		const imageName = match[1];
 		const placeholder = `__OUTLINE_IMG_${images.length}__`;
-
 		const imageFile = app.metadataCache.getFirstLinkpathDest(imageName, sourceFile.path);
 		if (imageFile instanceof TFile) {
 			images.push({ obsidianPath: imageFile.path, placeholder });
 			content = content.replace(match[0], placeholder);
 		} else {
 			content = content.replace(match[0], `*(Bild nicht gefunden: ${imageName})*`);
+		}
+	}
+
+	for (const match of mdMatches) {
+		const rawPath = match[2];
+		const placeholder = `__OUTLINE_IMG_${images.length}__`;
+		const decoded = decodeURIComponent(rawPath);
+		const imageFile =
+			app.metadataCache.getFirstLinkpathDest(decoded, sourceFile.path) ??
+			app.vault.getAbstractFileByPath(decoded) ??
+			app.vault.getAbstractFileByPath(rawPath);
+		if (imageFile instanceof TFile) {
+			images.push({ obsidianPath: imageFile.path, placeholder });
+			content = content.replace(match[0], placeholder);
+		} else {
+			content = content.replace(match[0], `*(Bild nicht gefunden: ${rawPath})*`);
 		}
 	}
 
