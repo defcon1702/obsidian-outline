@@ -76,6 +76,10 @@ npm run dev
 
 Copy the plugin folder to `<vault>/.obsidian/plugins/obsidian-outline-sync/` and enable it in Obsidian.
 
+## Disclaimer
+
+This plugin was created to the best of our knowledge and belief, but developed with the assistance of AI – specifically [Claude Sonnet](https://www.anthropic.com/claude) via [Windsurf](https://www.codeium.com/windsurf). While the code has been reviewed and tested, use it at your own risk. No warranty is provided.
+
 ## Security
 
 The API key is stored in plain text in `.obsidian/plugins/obsidian-outline-sync/data.json`. If you use a cloud sync service (iCloud, Dropbox, Google Drive, Obsidian Sync), make sure to **exclude this file** from sync to avoid exposing your API key.
