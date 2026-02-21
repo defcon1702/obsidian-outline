@@ -25,11 +25,7 @@ export class PushEngine {
 		try {
 			const rawContent = await this.app.vault.read(file);
 			const { markdown, images } = await convertToOutlineMarkdown(this.app, file, rawContent);
-
-			let resolvedMarkdown = markdown;
-			if (images.length > 0) {
-				resolvedMarkdown = await this.uploadImagesAndReplace(file, markdown, images);
-			}
+			const resolvedMarkdown = markdown;
 
 			const meta = getOutlineMeta(rawContent);
 			const title = file.basename;
@@ -40,6 +36,11 @@ export class PushEngine {
 			const duplicate = knownId
 				? { id: knownId, collectionId: targetCollection }
 				: await this.client.searchDocumentByTitle(title, targetCollection);
+
+			let documentId: string;
+			let documentCollectionId: string;
+			let noticeText: string;
+
 			if (duplicate) {
 				notice.hide();
 				const resolution = await resolveConflict(this.app, title);
@@ -53,49 +54,53 @@ export class PushEngine {
 						publish: true,
 					});
 					if (!updated) throw new Error("Update fehlgeschlagen");
-					await updateOutlineFrontmatter(this.app, file, {
-						outline_id: duplicate.id,
-						outline_collection_id: duplicate.collectionId,
-						outline_last_synced: new Date().toISOString(),
+					documentId = duplicate.id;
+					documentCollectionId = duplicate.collectionId;
+					noticeText = `✓ "${title}" überschrieben in Outline`;
+				} else {
+					const uniqueTitle = await this.findAvailableTitle(title, targetCollection);
+					const created = await this.client.createDocument({
+						title: uniqueTitle,
+						text: resolvedMarkdown,
+						collectionId: targetCollection,
+						publish: true,
 					});
-					new Notice(`✓ "${title}" überschrieben in Outline`);
-					return;
+					if (!created) throw new Error("Erstellen fehlgeschlagen");
+					documentId = created.id;
+					documentCollectionId = created.collectionId;
+					noticeText = `✓ "${uniqueTitle}" als Duplikat angelegt`;
 				}
-
-				const uniqueTitle = await this.findAvailableTitle(title, targetCollection);
+			} else {
 				const created = await this.client.createDocument({
-					title: uniqueTitle,
+					title,
 					text: resolvedMarkdown,
 					collectionId: targetCollection,
 					publish: true,
 				});
 				if (!created) throw new Error("Erstellen fehlgeschlagen");
-				await updateOutlineFrontmatter(this.app, file, {
-					outline_id: created.id,
-					outline_collection_id: created.collectionId,
-					outline_last_synced: new Date().toISOString(),
-				});
-				new Notice(`✓ "${uniqueTitle}" als Duplikat angelegt`);
-				return;
+				documentId = created.id;
+				documentCollectionId = created.collectionId;
+				noticeText = `✓ "${title}" gepusht → Outline`;
 			}
 
-			const created = await this.client.createDocument({
-				title,
-				text: resolvedMarkdown,
-				collectionId: targetCollection,
-				publish: true,
-			});
-
-			if (!created) throw new Error("Erstellen fehlgeschlagen");
+			if (images.length > 0) {
+				const withImages = await this.uploadImagesAndReplace(file, resolvedMarkdown, images, documentId);
+				await this.client.updateDocument({
+					id: documentId,
+					title,
+					text: withImages,
+					publish: true,
+				});
+			}
 
 			await updateOutlineFrontmatter(this.app, file, {
-				outline_id: created.id,
-				outline_collection_id: created.collectionId,
+				outline_id: documentId,
+				outline_collection_id: documentCollectionId,
 				outline_last_synced: new Date().toISOString(),
 			});
 
 			notice.hide();
-			new Notice(`✓ "${title}" gepusht → Outline`, 5000);
+			new Notice(noticeText, 5000);
 
 		} catch (e) {
 			notice.hide();
@@ -205,10 +210,7 @@ export class PushEngine {
 	): Promise<void> {
 		const rawContent = fileContentCache.get(file.path) ?? await this.app.vault.read(file);
 		const { markdown, images } = await convertToOutlineMarkdown(this.app, file, rawContent);
-		let resolvedMarkdown = await resolveWikiLinksWithCache(this.app, markdown, fileContentCache);
-		if (images.length > 0) {
-			resolvedMarkdown = await this.uploadImagesAndReplace(file, resolvedMarkdown, images);
-		}
+		const resolvedMarkdown = await resolveWikiLinksWithCache(this.app, markdown, fileContentCache);
 
 		const meta = getOutlineMeta(rawContent);
 		const title = file.basename;
@@ -220,6 +222,9 @@ export class PushEngine {
 			? { id: knownId, collectionId }
 			: await this.client.searchDocumentByTitle(title, collectionId);
 
+		let documentId: string;
+		let documentCollectionId: string;
+
 		if (duplicate) {
 			if (strategy === "overwrite") {
 				await this.client.updateDocument({
@@ -228,11 +233,8 @@ export class PushEngine {
 					text: resolvedMarkdown,
 					publish: true,
 				});
-				await updateOutlineFrontmatter(this.app, file, {
-					outline_id: duplicate.id,
-					outline_collection_id: duplicate.collectionId,
-					outline_last_synced: new Date().toISOString(),
-				});
+				documentId = duplicate.id;
+				documentCollectionId = duplicate.collectionId;
 			} else {
 				const uniqueTitle = await this.findAvailableTitle(title, collectionId);
 				const dup = await this.client.createDocument({
@@ -242,30 +244,36 @@ export class PushEngine {
 					publish: true,
 					parentDocumentId,
 				});
-				if (dup) {
-					await updateOutlineFrontmatter(this.app, file, {
-						outline_id: dup.id,
-						outline_collection_id: dup.collectionId,
-						outline_last_synced: new Date().toISOString(),
-					});
-				}
+				if (!dup) throw new Error("Duplikat erstellen fehlgeschlagen");
+				documentId = dup.id;
+				documentCollectionId = dup.collectionId;
 			}
-			const refreshed = await this.app.vault.read(file);
-			fileContentCache.set(file.path, refreshed);
-			return;
+		} else {
+			const created = await this.client.createDocument({
+				title,
+				text: resolvedMarkdown,
+				collectionId,
+				publish: true,
+				parentDocumentId,
+			});
+			if (!created) throw new Error("API returned null");
+			documentId = created.id;
+			documentCollectionId = created.collectionId;
 		}
 
-		const created = await this.client.createDocument({
-			title,
-			text: resolvedMarkdown,
-			collectionId,
-			publish: true,
-			parentDocumentId,
-		});
-		if (!created) throw new Error("API returned null");
+		if (images.length > 0) {
+			const withImages = await this.uploadImagesAndReplace(file, resolvedMarkdown, images, documentId);
+			await this.client.updateDocument({
+				id: documentId,
+				title,
+				text: withImages,
+				publish: true,
+			});
+		}
+
 		await updateOutlineFrontmatter(this.app, file, {
-			outline_id: created.id,
-			outline_collection_id: created.collectionId,
+			outline_id: documentId,
+			outline_collection_id: documentCollectionId,
 			outline_last_synced: new Date().toISOString(),
 		});
 		const refreshed = await this.app.vault.read(file);
@@ -275,7 +283,8 @@ export class PushEngine {
 	private async uploadImagesAndReplace(
 		_file: TFile,
 		markdown: string,
-		images: { obsidianPath: string; placeholder: string }[]
+		images: { obsidianPath: string; placeholder: string }[],
+		documentId?: string
 	): Promise<string> {
 		let result = markdown;
 
@@ -294,6 +303,7 @@ export class PushEngine {
 				name: imageFile.name,
 				contentType,
 				size: fileData.byteLength,
+				documentId,
 			});
 
 			if (!attachmentMeta) {

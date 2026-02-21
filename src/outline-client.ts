@@ -71,7 +71,7 @@ export class OutlineClient {
 			}
 
 			if (response.status >= 400) {
-				console.error(`[Outline Sync] API error ${response.status} on ${endpoint}`);
+				console.error(`[Outline Sync] API error ${response.status} on ${endpoint} – prüfe Outline-Logs oder Storage-Konfiguration`);
 				return null;
 			}
 
