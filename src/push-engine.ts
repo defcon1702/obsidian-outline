@@ -34,23 +34,12 @@ export class PushEngine {
 			const meta = getOutlineMeta(rawContent);
 			const title = file.basename;
 
-			if (meta.outline_id) {
-				const existing = await this.client.getDocument(meta.outline_id);
-				if (existing) {
-					const updated = await this.client.updateDocument({
-						id: meta.outline_id,
-						title,
-						text: resolvedMarkdown,
-						publish: true,
-					});
-					if (!updated) throw new Error("Update fehlgeschlagen");
-					notice.hide();
-					new Notice(`✓ "${title}" aktualisiert in Outline`);
-					return;
-				}
-			}
-
-			const duplicate = await this.client.searchDocumentByTitle(title, targetCollection);
+			const knownId = meta.outline_id
+				? (await this.client.getDocument(meta.outline_id))?.id ?? null
+				: null;
+			const duplicate = knownId
+				? { id: knownId, collectionId: targetCollection }
+				: await this.client.searchDocumentByTitle(title, targetCollection);
 			if (duplicate) {
 				notice.hide();
 				const resolution = await resolveConflict(this.app, title);
@@ -154,23 +143,12 @@ export class PushEngine {
 				const meta = getOutlineMeta(rawContent);
 				const title = file.basename;
 
-				if (meta.outline_id) {
-					const existing = await this.client.getDocument(meta.outline_id);
-					if (existing) {
-						await this.client.updateDocument({
-							id: meta.outline_id,
-							title,
-							text: resolvedMarkdown,
-							publish: true,
-						});
-						const updatedRaw = fileContentCache.get(file.path) ?? rawContent;
-						fileContentCache.set(file.path, updatedRaw);
-						success++;
-						continue;
-					}
-				}
-
-				const duplicate = await this.client.searchDocumentByTitle(title, targetCollection);
+				const knownId = meta.outline_id
+					? (await this.client.getDocument(meta.outline_id))?.id ?? null
+					: null;
+				const duplicate = knownId
+					? { id: knownId, collectionId: targetCollection }
+					: await this.client.searchDocumentByTitle(title, targetCollection);
 				if (duplicate) {
 					if (folderStrategy === "overwrite") {
 						await this.client.updateDocument({
