@@ -15,9 +15,10 @@ export class PushEngine {
 		this.settings = settings;
 	}
 
-	async pushFile(file: TFile): Promise<void> {
+	async pushFile(file: TFile, collectionId?: string): Promise<void> {
 		if (!this.validateConfig()) return;
 
+		const targetCollection = collectionId ?? this.settings.targetCollectionId;
 		const notice = new Notice(`Pushing "${file.basename}" to Outline…`, 0);
 
 		try {
@@ -51,7 +52,7 @@ export class PushEngine {
 			const created = await this.client.createDocument({
 				title,
 				text: resolvedMarkdown,
-				collectionId: this.settings.targetCollectionId,
+				collectionId: targetCollection,
 				publish: true,
 			});
 
@@ -74,9 +75,10 @@ export class PushEngine {
 		}
 	}
 
-	async pushFolder(folder: TFolder): Promise<void> {
+	async pushFolder(folder: TFolder, collectionId?: string): Promise<void> {
 		if (!this.validateConfig()) return;
 
+		const targetCollection = collectionId ?? this.settings.targetCollectionId;
 		const files = this.collectMarkdownFiles(folder);
 		if (files.length === 0) {
 			new Notice("Keine Markdown-Dateien im Ordner gefunden.");
@@ -127,7 +129,7 @@ export class PushEngine {
 				const created = await this.client.createDocument({
 					title,
 					text: resolvedMarkdown,
-					collectionId: this.settings.targetCollectionId,
+					collectionId: targetCollection,
 					publish: true,
 				});
 

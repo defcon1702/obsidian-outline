@@ -1,11 +1,14 @@
-import { Menu, Plugin, TFile, TFolder } from "obsidian";
+import { Menu, Notice, Plugin, TFile, TFolder } from "obsidian";
 import { OutlineClient } from "./outline-client";
+import type { OutlineCollection } from "./outline-client";
 import { PushEngine } from "./push-engine";
 import { DEFAULT_SETTINGS, OutlineSyncSettingTab, OutlineSyncSettings } from "./settings";
+import { pickCollection } from "./collection-picker-modal";
 
 export default class OutlineSyncPlugin extends Plugin {
 	settings: OutlineSyncSettings = DEFAULT_SETTINGS;
 	client!: OutlineClient;
+	cachedCollections: OutlineCollection[] = [];
 	private engine!: PushEngine;
 
 	async onload(): Promise<void> {
@@ -14,6 +17,10 @@ export default class OutlineSyncPlugin extends Plugin {
 
 		this.addSettingTab(new OutlineSyncSettingTab(this.app, this));
 
+		if (this.settings.outlineUrl && this.settings.apiKey) {
+			void this.refreshCollections();
+		}
+
 		this.addCommand({
 			id: "push-to-outline",
 			name: "Push aktive Datei zu Outline",
@@ -21,7 +28,7 @@ export default class OutlineSyncPlugin extends Plugin {
 				const file = this.app.workspace.getActiveFile();
 				if (!file || file.extension !== "md") return false;
 				if (!checking) {
-					void this.engine.pushFile(file);
+					void this.pushFileWithPicker(file);
 				}
 				return true;
 			},
@@ -35,7 +42,7 @@ export default class OutlineSyncPlugin extends Plugin {
 				if (!file) return;
 				const folder = file.parent;
 				if (folder instanceof TFolder) {
-					void this.engine.pushFolder(folder);
+					void this.pushFolderWithPicker(folder);
 				}
 			},
 		});
@@ -47,7 +54,7 @@ export default class OutlineSyncPlugin extends Plugin {
 						item
 							.setTitle("Push zu Outline")
 							.setIcon("upload")
-							.onClick(() => void this.engine.pushFile(abstractFile));
+							.onClick(() => void this.pushFileWithPicker(abstractFile));
 					});
 				}
 
@@ -56,11 +63,45 @@ export default class OutlineSyncPlugin extends Plugin {
 						item
 							.setTitle("Ordner zu Outline pushen")
 							.setIcon("folder-up")
-							.onClick(() => void this.engine.pushFolder(abstractFile));
+							.onClick(() => void this.pushFolderWithPicker(abstractFile));
 					});
 				}
 			})
 		);
+	}
+
+	async pushFileWithPicker(file: TFile): Promise<void> {
+		const collectionId = await this.resolveCollectionId();
+		if (!collectionId) return;
+		void this.engine.pushFile(file, collectionId);
+	}
+
+	async pushFolderWithPicker(folder: TFolder): Promise<void> {
+		const collectionId = await this.resolveCollectionId();
+		if (!collectionId) return;
+		void this.engine.pushFolder(folder, collectionId);
+	}
+
+	private async resolveCollectionId(): Promise<string | null> {
+		if (this.settings.targetCollectionId) {
+			return this.settings.targetCollectionId;
+		}
+
+		if (this.cachedCollections.length === 0) {
+			await this.refreshCollections();
+		}
+
+		if (this.cachedCollections.length === 0) {
+			new Notice("Outline Sync: Keine Collections verfügbar. Bitte URL und API Key prüfen.");
+			return null;
+		}
+
+		return pickCollection(this.app, this.cachedCollections, "");
+	}
+
+	async refreshCollections(): Promise<void> {
+		const collections = await this.client.listCollections();
+		this.cachedCollections = collections ?? [];
 	}
 
 	async loadSettings(): Promise<void> {

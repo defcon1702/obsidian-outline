@@ -29,6 +29,10 @@ export class OutlineSyncSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
+		if (this.plugin.cachedCollections.length > 0) {
+			void this.loadCollections();
+		}
+
 		new Setting(containerEl)
 			.setName("Outline URL")
 			.setDesc("URL deiner Outline-Instanz, z.B. https://outline.example.com")
@@ -99,8 +103,10 @@ export class OutlineSyncSettingTab extends PluginSettingTab {
 	}
 
 	async loadCollections(): Promise<void> {
-		const collections = await this.plugin.client.listCollections();
-		if (!collections || !this.collectionDropdown) {
+		await this.plugin.refreshCollections();
+		const collections = this.plugin.cachedCollections;
+
+		if (collections.length === 0 || !this.collectionDropdown) {
 			new Notice("Collections konnten nicht geladen werden.");
 			return;
 		}
