@@ -109,8 +109,8 @@ export class PushEngine {
 		if (!this.validateConfig()) return;
 
 		const targetCollection = collectionId ?? this.settings.targetCollectionId;
-		const files = this.collectMarkdownFiles(folder);
-		if (files.length === 0) {
+		const allFiles = this.collectMarkdownFiles(folder);
+		if (allFiles.length === 0) {
 			new Notice("Keine Markdown-Dateien im Ordner gefunden.");
 			return;
 		}
@@ -118,102 +118,158 @@ export class PushEngine {
 		const folderStrategy = await resolveFolderConflictStrategy(this.app);
 		if (folderStrategy === "cancel") return;
 
-		const notice = new Notice(`Pushing ${files.length} Dateien zu Outline…`, 0);
-		let success = 0;
-		let failed = 0;
-
+		const notice = new Notice(`Pushing ${folder.name}…`, 0);
+		const counter = { success: 0, failed: 0 };
 		const fileContentCache = new Map<string, string>();
-		for (const file of files) {
+		for (const file of allFiles) {
 			fileContentCache.set(file.path, await this.app.vault.read(file));
 		}
 
-		for (let i = 0; i < files.length; i++) {
-			const file = files[i];
-			notice.setMessage(`Pushing ${i + 1}/${files.length}: ${file.basename}…`);
+		await this.pushFolderRecursive(
+			folder,
+			targetCollection,
+			undefined,
+			folderStrategy,
+			fileContentCache,
+			notice,
+			counter,
+			true
+		);
 
-			try {
-				const rawContent = fileContentCache.get(file.path) ?? await this.app.vault.read(file);
-				const { markdown, images } = await convertToOutlineMarkdown(this.app, file, rawContent);
+		notice.hide();
+		const msg = counter.failed > 0
+			? `✓ ${counter.success} gepusht, ✗ ${counter.failed} fehlgeschlagen`
+			: `✓ ${counter.success} Dateien erfolgreich gepusht`;
+		new Notice(msg, 6000);
+	}
 
-				let resolvedMarkdown = await resolveWikiLinksWithCache(this.app, markdown, fileContentCache);
-				if (images.length > 0) {
-					resolvedMarkdown = await this.uploadImagesAndReplace(file, resolvedMarkdown, images);
-				}
+	private async pushFolderRecursive(
+		folder: TFolder,
+		collectionId: string,
+		parentDocumentId: string | undefined,
+		strategy: "overwrite" | "duplicate",
+		fileContentCache: Map<string, string>,
+		notice: Notice,
+		counter: { success: number; failed: number },
+		isRoot: boolean
+	): Promise<void> {
+		let folderDocId: string | undefined = parentDocumentId;
 
-				const meta = getOutlineMeta(rawContent);
-				const title = file.basename;
-
-				const knownId = meta.outline_id
-					? (await this.client.getDocument(meta.outline_id))?.id ?? null
-					: null;
-				const duplicate = knownId
-					? { id: knownId, collectionId: targetCollection }
-					: await this.client.searchDocumentByTitle(title, targetCollection);
-				if (duplicate) {
-					if (folderStrategy === "overwrite") {
-						await this.client.updateDocument({
-							id: duplicate.id,
-							title,
-							text: resolvedMarkdown,
-							publish: true,
-						});
-						await updateOutlineFrontmatter(this.app, file, {
-							outline_id: duplicate.id,
-							outline_collection_id: duplicate.collectionId,
-							outline_last_synced: new Date().toISOString(),
-						});
-					} else {
-						const uniqueTitle = await this.findAvailableTitle(title, targetCollection);
-						const dup = await this.client.createDocument({
-							title: uniqueTitle,
-							text: resolvedMarkdown,
-							collectionId: targetCollection,
-							publish: true,
-						});
-						if (dup) {
-							await updateOutlineFrontmatter(this.app, file, {
-								outline_id: dup.id,
-								outline_collection_id: dup.collectionId,
-								outline_last_synced: new Date().toISOString(),
-							});
-						}
-					}
-					const refreshed = await this.app.vault.read(file);
-					fileContentCache.set(file.path, refreshed);
-					success++;
-					continue;
-				}
-
-				const created = await this.client.createDocument({
-					title,
-					text: resolvedMarkdown,
-					collectionId: targetCollection,
+		if (!isRoot) {
+			const existing = await this.client.searchDocumentByTitle(folder.name, collectionId);
+			if (existing) {
+				folderDocId = existing.id;
+			} else {
+				const folderDoc = await this.client.createDocument({
+					title: folder.name,
+					text: "",
+					collectionId,
 					publish: true,
+					parentDocumentId,
 				});
-
-				if (!created) throw new Error("API returned null");
-
-				await updateOutlineFrontmatter(this.app, file, {
-					outline_id: created.id,
-					outline_collection_id: created.collectionId,
-					outline_last_synced: new Date().toISOString(),
-				});
-
-				const refreshed = await this.app.vault.read(file);
-				fileContentCache.set(file.path, refreshed);
-
-				success++;
-			} catch (e) {
-				failed++;
-				console.error(`[Outline Sync] Failed to push "${file.path}":`, e);
+				folderDocId = folderDoc?.id;
 			}
 		}
 
-		notice.hide();
-		const msg = failed > 0
-			? `✓ ${success} gepusht, ✗ ${failed} fehlgeschlagen`
-			: `✓ ${success} Dateien erfolgreich gepusht`;
-		new Notice(msg, 6000);
+		for (const child of folder.children) {
+			if (child instanceof TFile && child.extension === "md") {
+				notice.setMessage(`Pushing ${child.basename}…`);
+				try {
+					await this.pushFileInFolder(child, collectionId, folderDocId, strategy, fileContentCache);
+					counter.success++;
+				} catch (e) {
+					counter.failed++;
+					console.error(`[Outline Sync] Failed to push "${child.path}":`, e);
+				}
+			} else if (child instanceof TFolder) {
+				await this.pushFolderRecursive(
+					child,
+					collectionId,
+					folderDocId,
+					strategy,
+					fileContentCache,
+					notice,
+					counter,
+					false
+				);
+			}
+		}
+	}
+
+	private async pushFileInFolder(
+		file: TFile,
+		collectionId: string,
+		parentDocumentId: string | undefined,
+		strategy: "overwrite" | "duplicate",
+		fileContentCache: Map<string, string>
+	): Promise<void> {
+		const rawContent = fileContentCache.get(file.path) ?? await this.app.vault.read(file);
+		const { markdown, images } = await convertToOutlineMarkdown(this.app, file, rawContent);
+		let resolvedMarkdown = await resolveWikiLinksWithCache(this.app, markdown, fileContentCache);
+		if (images.length > 0) {
+			resolvedMarkdown = await this.uploadImagesAndReplace(file, resolvedMarkdown, images);
+		}
+
+		const meta = getOutlineMeta(rawContent);
+		const title = file.basename;
+
+		const knownId = meta.outline_id
+			? (await this.client.getDocument(meta.outline_id))?.id ?? null
+			: null;
+		const duplicate = knownId
+			? { id: knownId, collectionId }
+			: await this.client.searchDocumentByTitle(title, collectionId);
+
+		if (duplicate) {
+			if (strategy === "overwrite") {
+				await this.client.updateDocument({
+					id: duplicate.id,
+					title,
+					text: resolvedMarkdown,
+					publish: true,
+				});
+				await updateOutlineFrontmatter(this.app, file, {
+					outline_id: duplicate.id,
+					outline_collection_id: duplicate.collectionId,
+					outline_last_synced: new Date().toISOString(),
+				});
+			} else {
+				const uniqueTitle = await this.findAvailableTitle(title, collectionId);
+				const dup = await this.client.createDocument({
+					title: uniqueTitle,
+					text: resolvedMarkdown,
+					collectionId,
+					publish: true,
+					parentDocumentId,
+				});
+				if (dup) {
+					await updateOutlineFrontmatter(this.app, file, {
+						outline_id: dup.id,
+						outline_collection_id: dup.collectionId,
+						outline_last_synced: new Date().toISOString(),
+					});
+				}
+			}
+			const refreshed = await this.app.vault.read(file);
+			fileContentCache.set(file.path, refreshed);
+			return;
+		}
+
+		const created = await this.client.createDocument({
+			title,
+			text: resolvedMarkdown,
+			collectionId,
+			publish: true,
+			parentDocumentId,
+		});
+		if (!created) throw new Error("API returned null");
+		await updateOutlineFrontmatter(this.app, file, {
+			outline_id: created.id,
+			outline_collection_id: created.collectionId,
+			outline_last_synced: new Date().toISOString(),
+		});
+		const refreshed = await this.app.vault.read(file);
+		fileContentCache.set(file.path, refreshed);
 	}
 
 	private async uploadImagesAndReplace(

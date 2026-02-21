@@ -92,6 +92,7 @@ export class OutlineClient {
 		text: string;
 		collectionId: string;
 		publish: boolean;
+		parentDocumentId?: string;
 	}): Promise<OutlineDocument | null> {
 		const result = await this.request<{ data: OutlineDocument }>("documents.create", params);
 		return result?.data ?? null;
