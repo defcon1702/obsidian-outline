@@ -35,12 +35,12 @@ export class OutlineSyncSettingTab extends PluginSettingTab {
 
 		const warning = containerEl.createEl("div", { cls: "callout" });
 		warning.style.cssText = "background:var(--background-modifier-error-hover);border-left:3px solid var(--color-orange);padding:8px 12px;margin-bottom:16px;border-radius:4px;font-size:0.85em;";
-		warning.createEl("strong", { text: "Sicherheitshinweis: " });
-		warning.appendText("Der API-Key wird im Klartext in data.json gespeichert. Stelle sicher, dass diese Datei nicht in einem öffentlichen Cloud-Sync (z.B. iCloud, Dropbox) landet. Schließe sie ggf. aus deinem Sync aus.");
+		warning.createEl("strong", { text: "Security notice: " });
+		warning.appendText("The API key is stored in plain text in data.json. Make sure this file is excluded from public cloud sync services (e.g. iCloud, Dropbox).");
 
 		new Setting(containerEl)
 			.setName("Outline URL")
-			.setDesc("URL deiner Outline-Instanz, z.B. https://outline.example.com")
+			.setDesc("URL of your Outline instance, e.g. https://outline.example.com")
 			.addText((text) =>
 				text
 					.setPlaceholder("https://outline.example.com")
@@ -66,33 +66,33 @@ export class OutlineSyncSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName("API Key validieren")
-			.setDesc("Verbindung zu Outline testen und Collections laden")
+			.setName("Validate API Key")
+			.setDesc("Test connection to Outline and load collections")
 			.addButton((btn) =>
 				btn
-					.setButtonText("Verbinden")
+					.setButtonText("Connect")
 					.setCta()
 					.onClick(async () => {
-						btn.setButtonText("Prüfe...");
+						btn.setButtonText("Checking…");
 						btn.setDisabled(true);
 						const ok = await this.plugin.client.validateAuth();
 						btn.setDisabled(false);
 						if (ok) {
-							btn.setButtonText("✓ Verbunden");
+							btn.setButtonText("✓ Connected");
 							await this.loadCollections();
 						} else {
-							btn.setButtonText("✗ Fehler");
-							new Notice("Verbindung fehlgeschlagen. URL und API Key prüfen.");
+							btn.setButtonText("✗ Failed");
+							new Notice("Connection failed. Check URL and API key.");
 						}
 					})
 			);
 
 		new Setting(containerEl)
-			.setName("Ziel-Collection")
-			.setDesc("Alle gepushten Dokumente landen in dieser Collection")
+			.setName("Default Collection")
+			.setDesc("Documents will be pushed to this collection by default")
 			.addDropdown((dropdown) => {
 				this.collectionDropdown = dropdown;
-				dropdown.addOption("", "— Erst verbinden —");
+				dropdown.addOption("", "— Connect first —");
 				if (this.plugin.settings.targetCollectionId) {
 					dropdown.addOption(
 						this.plugin.settings.targetCollectionId,
@@ -112,7 +112,7 @@ export class OutlineSyncSettingTab extends PluginSettingTab {
 		const collections = this.plugin.cachedCollections;
 
 		if (collections.length === 0 || !this.collectionDropdown) {
-			new Notice("Collections konnten nicht geladen werden.");
+			new Notice("Could not load collections.");
 			return;
 		}
 
@@ -122,7 +122,7 @@ export class OutlineSyncSettingTab extends PluginSettingTab {
 
 		const placeholder = document.createElement("option");
 		placeholder.value = "";
-		placeholder.text = "— Collection wählen —";
+		placeholder.text = "— Select collection —";
 		selectEl.appendChild(placeholder);
 
 		for (const col of collections) {
@@ -142,6 +142,6 @@ export class OutlineSyncSettingTab extends PluginSettingTab {
 			await this.plugin.saveSettings();
 		});
 
-		new Notice(`${collections.length} Collections geladen.`);
+		new Notice(`${collections.length} collection(s) loaded.`);
 	}
 }

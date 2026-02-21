@@ -32,11 +32,11 @@ class CollectionPickerModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 
-		this.titleEl.setText("Ziel-Collection wählen");
+		this.titleEl.setText("Select target collection");
 
 		new Setting(contentEl)
 			.setName("Collection")
-			.setDesc("Wohin soll das Dokument gepusht werden?")
+			.setDesc("Where should the document be pushed to?")
 			.addDropdown((dropdown) => {
 				for (const col of this.collections) {
 					dropdown.addOption(col.id, col.name);
@@ -59,7 +59,7 @@ class CollectionPickerModal extends Modal {
 			)
 			.addButton((btn) =>
 				btn
-					.setButtonText("Abbrechen")
+					.setButtonText("Cancel")
 					.onClick(() => {
 						this.resolve(null);
 						this.close();

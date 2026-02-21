@@ -53,10 +53,10 @@ export class PushEngine {
 						text: resolvedMarkdown,
 						publish: true,
 					});
-					if (!updated) throw new Error("Update fehlgeschlagen");
+					if (!updated) throw new Error("Update failed");
 					documentId = duplicate.id;
 					documentCollectionId = duplicate.collectionId;
-					noticeText = `✓ "${title}" überschrieben in Outline`;
+					noticeText = `✓ "${title}" overwritten in Outline`;
 				} else {
 					const uniqueTitle = await this.findAvailableTitle(title, targetCollection);
 					const created = await this.client.createDocument({
@@ -65,10 +65,10 @@ export class PushEngine {
 						collectionId: targetCollection,
 						publish: true,
 					});
-					if (!created) throw new Error("Erstellen fehlgeschlagen");
+					if (!created) throw new Error("Create failed");
 					documentId = created.id;
 					documentCollectionId = created.collectionId;
-					noticeText = `✓ "${uniqueTitle}" als Duplikat angelegt`;
+					noticeText = `✓ "${uniqueTitle}" created as duplicate`;
 				}
 			} else {
 				const created = await this.client.createDocument({
@@ -77,10 +77,10 @@ export class PushEngine {
 					collectionId: targetCollection,
 					publish: true,
 				});
-				if (!created) throw new Error("Erstellen fehlgeschlagen");
+				if (!created) throw new Error("Create failed");
 				documentId = created.id;
 				documentCollectionId = created.collectionId;
-				noticeText = `✓ "${title}" gepusht → Outline`;
+				noticeText = `✓ "${title}" pushed to Outline`;
 			}
 
 			if (images.length > 0) {
@@ -105,7 +105,7 @@ export class PushEngine {
 		} catch (e) {
 			notice.hide();
 			const msg = e instanceof Error ? e.message : String(e);
-			new Notice(`✗ Push fehlgeschlagen: ${msg}`, 8000);
+			new Notice(`✗ Push failed: ${msg}`, 8000);
 			console.error("[Outline Sync] pushFile error:", e);
 		}
 	}
@@ -116,7 +116,7 @@ export class PushEngine {
 		const targetCollection = collectionId ?? this.settings.targetCollectionId;
 		const allFiles = this.collectMarkdownFiles(folder);
 		if (allFiles.length === 0) {
-			new Notice("Keine Markdown-Dateien im Ordner gefunden.");
+			new Notice("No Markdown files found in folder.");
 			return;
 		}
 
@@ -143,8 +143,8 @@ export class PushEngine {
 
 		notice.hide();
 		const msg = counter.failed > 0
-			? `✓ ${counter.success} gepusht, ✗ ${counter.failed} fehlgeschlagen`
-			: `✓ ${counter.success} Dateien erfolgreich gepusht`;
+			? `✓ ${counter.success} pushed, ✗ ${counter.failed} failed`
+			: `✓ ${counter.success} file(s) successfully pushed`;
 		new Notice(msg, 6000);
 	}
 
@@ -244,7 +244,7 @@ export class PushEngine {
 					publish: true,
 					parentDocumentId,
 				});
-				if (!dup) throw new Error("Duplikat erstellen fehlgeschlagen");
+				if (!dup) throw new Error("Create duplicate failed");
 				documentId = dup.id;
 				documentCollectionId = dup.collectionId;
 			}
@@ -256,7 +256,7 @@ export class PushEngine {
 				publish: true,
 				parentDocumentId,
 			});
-			if (!created) throw new Error("API returned null");
+			if (!created) throw new Error("API returned null"); 
 			documentId = created.id;
 			documentCollectionId = created.collectionId;
 		}
@@ -367,7 +367,7 @@ export class PushEngine {
 
 	private validateConfig(): boolean {
 		if (!this.settings.outlineUrl || !this.settings.apiKey) {
-			new Notice("Outline Sync: Bitte URL und API Key in den Einstellungen konfigurieren.");
+			new Notice("Outline Sync: Please configure URL and API key in settings.");
 			return false;
 		}
 		return true;

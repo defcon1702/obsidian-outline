@@ -34,16 +34,16 @@ class ConflictModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 
-		this.titleEl.setText("Dokument bereits vorhanden");
+		this.titleEl.setText("Document already exists");
 
 		contentEl.createEl("p", {
-			text: `„${this.title}" existiert bereits in Outline. Was soll passieren?`,
+			text: `"${this.title}" already exists in Outline. What would you like to do?`,
 		});
 
 		new Setting(contentEl)
 			.addButton((btn) =>
 				btn
-					.setButtonText("Überschreiben")
+					.setButtonText("Overwrite")
 					.setCta()
 					.onClick(() => {
 						this.resolve("overwrite");
@@ -52,7 +52,7 @@ class ConflictModal extends Modal {
 			)
 			.addButton((btn) =>
 				btn
-					.setButtonText("Duplikat anlegen")
+					.setButtonText("Create duplicate")
 					.onClick(() => {
 						this.resolve("duplicate");
 						this.close();
@@ -60,7 +60,7 @@ class ConflictModal extends Modal {
 			)
 			.addButton((btn) =>
 				btn
-					.setButtonText("Abbrechen")
+					.setButtonText("Cancel")
 					.onClick(() => {
 						this.resolve("cancel");
 						this.close();
@@ -90,16 +90,16 @@ class FolderConflictStrategyModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 
-		this.titleEl.setText("Konflikt-Strategie für Ordner-Push");
+		this.titleEl.setText("Conflict strategy for folder push");
 
 		contentEl.createEl("p", {
-			text: "Was soll passieren, wenn ein Dokument mit gleichem Titel bereits in Outline existiert?",
+			text: "What should happen when a document with the same title already exists in Outline?",
 		});
 
 		new Setting(contentEl)
 			.addButton((btn) =>
 				btn
-					.setButtonText("Alle überschreiben")
+					.setButtonText("Overwrite all")
 					.setCta()
 					.onClick(() => {
 						this.resolve("overwrite");
@@ -108,7 +108,7 @@ class FolderConflictStrategyModal extends Modal {
 			)
 			.addButton((btn) =>
 				btn
-					.setButtonText("Duplikate anlegen")
+					.setButtonText("Create duplicates")
 					.onClick(() => {
 						this.resolve("duplicate");
 						this.close();
@@ -116,7 +116,7 @@ class FolderConflictStrategyModal extends Modal {
 			)
 			.addButton((btn) =>
 				btn
-					.setButtonText("Abbrechen")
+					.setButtonText("Cancel")
 					.onClick(() => {
 						this.resolve("cancel");
 						this.close();

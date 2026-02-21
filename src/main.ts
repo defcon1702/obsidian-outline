@@ -23,7 +23,7 @@ export default class OutlineSyncPlugin extends Plugin {
 
 		this.addCommand({
 			id: "push-to-outline",
-			name: "Push aktive Datei zu Outline",
+			name: "Push active file to Outline",
 			checkCallback: (checking: boolean) => {
 				const file = this.app.workspace.getActiveFile();
 				if (!file || file.extension !== "md") return false;
@@ -36,7 +36,7 @@ export default class OutlineSyncPlugin extends Plugin {
 
 		this.addCommand({
 			id: "push-folder-to-outline",
-			name: "Push Ordner zu Outline",
+			name: "Push folder to Outline",
 			callback: () => {
 				const file = this.app.workspace.getActiveFile();
 				if (!file) return;
@@ -52,7 +52,7 @@ export default class OutlineSyncPlugin extends Plugin {
 				if (abstractFile instanceof TFile && abstractFile.extension === "md") {
 					menu.addItem((item) => {
 						item
-							.setTitle("Push zu Outline")
+							.setTitle("Push to Outline")
 							.setIcon("upload")
 							.onClick(() => void this.pushFileWithPicker(abstractFile));
 					});
@@ -61,7 +61,7 @@ export default class OutlineSyncPlugin extends Plugin {
 				if (abstractFile instanceof TFolder) {
 					menu.addItem((item) => {
 						item
-							.setTitle("Ordner zu Outline pushen")
+							.setTitle("Push folder to Outline")
 							.setIcon("folder-up")
 							.onClick(() => void this.pushFolderWithPicker(abstractFile));
 					});
@@ -92,7 +92,7 @@ export default class OutlineSyncPlugin extends Plugin {
 		}
 
 		if (this.cachedCollections.length === 0) {
-			new Notice("Outline Sync: Keine Collections verfügbar. Bitte URL und API Key prüfen.");
+			new Notice("Outline Sync: No collections available. Check URL and API key.");
 			return null;
 		}
 

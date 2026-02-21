@@ -48,7 +48,7 @@ async function resolveEmbeddedImages(
 			images.push({ obsidianPath: imageFile.path, placeholder });
 			content = content.replace(match[0], placeholder);
 		} else {
-			content = content.replace(match[0], `*(Bild nicht gefunden: ${imageName})*`);
+			content = content.replace(match[0], `*(Image not found: ${imageName})*`);
 		}
 	}
 
@@ -64,7 +64,7 @@ async function resolveEmbeddedImages(
 			images.push({ obsidianPath: imageFile.path, placeholder });
 			content = content.replace(match[0], placeholder);
 		} else {
-			content = content.replace(match[0], `*(Bild nicht gefunden: ${rawPath})*`);
+			content = content.replace(match[0], `*(Image not found: ${rawPath})*`);
 		}
 	}
 
