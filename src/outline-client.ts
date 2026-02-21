@@ -142,6 +142,11 @@ export class OutlineClient {
 
 	async uploadAttachmentToStorage(uploadUrl: string, form: Record<string, string>, fileData: ArrayBuffer, contentType: string): Promise<boolean> {
 		try {
+			const isLocalStorage = !uploadUrl.startsWith("http");
+			const absoluteUrl = isLocalStorage
+				? `${this.baseUrl}${uploadUrl.startsWith("/") ? "" : "/"}${uploadUrl}`
+				: uploadUrl;
+
 			const boundary = `----FormBoundary${Math.random().toString(36).slice(2)}`;
 			const parts: Uint8Array[] = [];
 			const enc = new TextEncoder();
@@ -161,13 +166,21 @@ export class OutlineClient {
 				offset += part.byteLength;
 			}
 
+			const headers: Record<string, string> = {
+				"Content-Type": `multipart/form-data; boundary=${boundary}`,
+			};
+			if (isLocalStorage) {
+				headers["Authorization"] = `Bearer ${this.apiKey}`;
+			}
+
 			const response: RequestUrlResponse = await requestUrl({
-				url: uploadUrl,
+				url: absoluteUrl,
 				method: "POST",
-				headers: { "Content-Type": `multipart/form-data; boundary=${boundary}` },
+				headers,
 				body: body.buffer,
 				throw: false,
 			});
+			console.log(`[Outline Sync] Storage upload status: ${response.status} (url: ${absoluteUrl.substring(0, 80)})`);
 			return response.status >= 200 && response.status < 300;
 		} catch (e) {
 			console.error("[Outline Sync] Attachment upload exception:", e);
