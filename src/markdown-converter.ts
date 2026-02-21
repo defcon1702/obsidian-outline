@@ -12,7 +12,7 @@ export interface ConvertResult {
 }
 
 const WIKI_LINK_REGEX = /\[\[([^\]|#]+)(?:#[^\]|]*)?\|?([^\]]*)\]\]/g;
-const EMBEDDED_IMAGE_WIKI_REGEX = /!\[\[([^\]]+\.(png|jpg|jpeg|gif|webp|svg|bmp))\]\]/gi;
+const EMBEDDED_IMAGE_WIKI_REGEX = /!\[\[([^\]|]+\.(png|jpg|jpeg|gif|webp|svg|bmp))(?:\|[^\]]*)?\]\]/gi;
 const EMBEDDED_IMAGE_MD_REGEX = /!\[([^\]]*)\]\(([^)]+\.(png|jpg|jpeg|gif|webp|svg|bmp))\)/gi;
 const CALLOUT_REGEX = /^> \[!(\w+)\]([-+]?)[ \t]*(.*)/gm;
 
