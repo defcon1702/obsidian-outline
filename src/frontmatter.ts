@@ -42,19 +42,11 @@ export async function updateOutlineFrontmatter(
 	file: TFile,
 	updates: OutlineFrontmatter
 ): Promise<void> {
-	const content = await app.vault.read(file);
-	const { meta, body } = parseFrontmatter(content);
-
-	const merged: Record<string, unknown> = { ...meta, ...updates };
-
-	const lines: string[] = [];
-	for (const [key, value] of Object.entries(merged)) {
-		if (value === undefined || value === null || value === "") continue;
-		lines.push(`${key}: ${String(value)}`);
-	}
-
-	const newContent = `---\n${lines.join("\n")}\n---\n${body}`;
-	await app.vault.modify(file, newContent);
+	await app.fileManager.processFrontMatter(file, (fm) => {
+		if (updates.outline_id !== undefined) fm["outline_id"] = updates.outline_id;
+		if (updates.outline_collection_id !== undefined) fm["outline_collection_id"] = updates.outline_collection_id;
+		if (updates.outline_last_synced !== undefined) fm["outline_last_synced"] = updates.outline_last_synced;
+	});
 }
 
 export function getOutlineMeta(content: string): OutlineFrontmatter {

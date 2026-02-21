@@ -33,6 +33,11 @@ export class OutlineSyncSettingTab extends PluginSettingTab {
 			void this.loadCollections();
 		}
 
+		const warning = containerEl.createEl("div", { cls: "callout" });
+		warning.style.cssText = "background:var(--background-modifier-error-hover);border-left:3px solid var(--color-orange);padding:8px 12px;margin-bottom:16px;border-radius:4px;font-size:0.85em;";
+		warning.createEl("strong", { text: "Sicherheitshinweis: " });
+		warning.appendText("Der API-Key wird im Klartext in data.json gespeichert. Stelle sicher, dass diese Datei nicht in einem öffentlichen Cloud-Sync (z.B. iCloud, Dropbox) landet. Schließe sie ggf. aus deinem Sync aus.");
+
 		new Setting(containerEl)
 			.setName("Outline URL")
 			.setDesc("URL deiner Outline-Instanz, z.B. https://outline.example.com")

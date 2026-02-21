@@ -344,9 +344,10 @@ export class PushEngine {
 	}
 
 	private async findAvailableTitle(baseTitle: string, collectionId: string): Promise<string> {
+		const MAX_ATTEMPTS = 50;
 		let counter = 1;
 		let candidate = `${baseTitle}-${counter}`;
-		while (await this.client.searchDocumentByTitle(candidate, collectionId)) {
+		while (counter <= MAX_ATTEMPTS && await this.client.searchDocumentByTitle(candidate, collectionId)) {
 			counter++;
 			candidate = `${baseTitle}-${counter}`;
 		}

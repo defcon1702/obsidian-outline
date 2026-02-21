@@ -1,4 +1,4 @@
-import { requestUrl, RequestUrlParam } from "obsidian";
+import { requestUrl, RequestUrlParam, RequestUrlResponse } from "obsidian";
 
 export interface OutlineCollection {
 	id: string;
@@ -31,7 +31,15 @@ export class OutlineClient {
 	private apiKey: string;
 
 	constructor(baseUrl: string, apiKey: string) {
-		this.baseUrl = baseUrl.replace(/\/$/, "");
+		try {
+			const parsed = new URL(baseUrl);
+			if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+				throw new Error("Ungültiges Protokoll");
+			}
+			this.baseUrl = parsed.origin;
+		} catch {
+			this.baseUrl = baseUrl.replace(/\/$/, "");
+		}
 		this.apiKey = apiKey;
 	}
 
@@ -55,14 +63,15 @@ export class OutlineClient {
 			const response = await requestUrl(params);
 
 			if (response.status === 429) {
-				const retryAfter = parseInt(response.headers["retry-after"] ?? "5", 10);
+				const raw = parseInt(response.headers["retry-after"] ?? "5", 10);
+				const retryAfter = Math.min(isNaN(raw) ? 5 : raw, 60);
 				await sleep(retryAfter * 1000);
 				attempt++;
 				continue;
 			}
 
 			if (response.status >= 400) {
-				console.error(`[Outline Sync] API error ${response.status} on ${endpoint}:`, response.text);
+				console.error(`[Outline Sync] API error ${response.status} on ${endpoint}`);
 				return null;
 			}
 
@@ -132,20 +141,36 @@ export class OutlineClient {
 	}
 
 	async uploadAttachmentToStorage(uploadUrl: string, form: Record<string, string>, fileData: ArrayBuffer, contentType: string): Promise<boolean> {
-		const formData = new FormData();
-		for (const [key, value] of Object.entries(form)) {
-			formData.append(key, value);
-		}
-		formData.append("file", new Blob([fileData], { type: contentType }));
-
 		try {
-			const response = await fetch(uploadUrl, {
+			const boundary = `----FormBoundary${Math.random().toString(36).slice(2)}`;
+			const parts: Uint8Array[] = [];
+			const enc = new TextEncoder();
+
+			for (const [key, value] of Object.entries(form)) {
+				parts.push(enc.encode(`--${boundary}\r\nContent-Disposition: form-data; name="${key}"\r\n\r\n${value}\r\n`));
+			}
+			parts.push(enc.encode(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="upload"\r\nContent-Type: ${contentType}\r\n\r\n`));
+			parts.push(new Uint8Array(fileData));
+			parts.push(enc.encode(`\r\n--${boundary}--\r\n`));
+
+			const totalLength = parts.reduce((sum, p) => sum + p.byteLength, 0);
+			const body = new Uint8Array(totalLength);
+			let offset = 0;
+			for (const part of parts) {
+				body.set(part, offset);
+				offset += part.byteLength;
+			}
+
+			const response: RequestUrlResponse = await requestUrl({
+				url: uploadUrl,
 				method: "POST",
-				body: formData,
+				headers: { "Content-Type": `multipart/form-data; boundary=${boundary}` },
+				body: body.buffer,
+				throw: false,
 			});
-			return response.ok;
+			return response.status >= 200 && response.status < 300;
 		} catch (e) {
-			console.error("[Outline Sync] Attachment upload failed:", e);
+			console.error("[Outline Sync] Attachment upload failed");
 			return false;
 		}
 	}

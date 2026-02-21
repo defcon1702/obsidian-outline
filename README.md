@@ -5,8 +5,9 @@ Push Obsidian notes and folders to your [Outline](https://www.getoutline.com/) k
 ## Features
 
 - **Push single note** – via Command Palette or right-click menu
-- **Push entire folder** – all Markdown files land flat in your target collection
-- **Smart re-push** – already pushed notes are updated, not duplicated (tracked via frontmatter)
+- **Push entire folder** – folder structure is preserved as nested documents in Outline
+- **Conflict resolution** – modal asks whether to overwrite or create a duplicate (with suffix `-1`, `-2`, …)
+- **Smart re-push** – already pushed notes are detected by ID or title (tracked via frontmatter)
 - **Image upload** – embedded images (`![[image.png]]`) are uploaded to Outline automatically
 - **Wiki-link resolution** – `[[Note Name]]` links are converted to real Outline document links if the target has already been pushed
 - **Callout conversion** – Obsidian callouts (`> [!NOTE]`) are converted to standard blockquotes
@@ -20,11 +21,9 @@ Push Obsidian notes and folders to your [Outline](https://www.getoutline.com/) k
 
 ## Installation
 
-### From Obsidian Community Plugins (recommended)
+### From Obsidian Community Plugins (coming soon)
 
-1. Open Obsidian Settings → Community Plugins
-2. Search for **Outline Sync**
-3. Install and enable
+> **Note:** This plugin is not yet listed in the official Obsidian Community Plugin directory. Manual installation is required for now.
 
 ### Manual
 
@@ -76,6 +75,16 @@ npm run dev
 ```
 
 Copy the plugin folder to `<vault>/.obsidian/plugins/obsidian-outline-sync/` and enable it in Obsidian.
+
+## Security
+
+The API key is stored in plain text in `.obsidian/plugins/obsidian-outline-sync/data.json`. If you use a cloud sync service (iCloud, Dropbox, Google Drive, Obsidian Sync), make sure to **exclude this file** from sync to avoid exposing your API key.
+
+Example `.gitignore` / sync exclusion:
+
+```gitignore
+.obsidian/plugins/obsidian-outline-sync/data.json
+```
 
 ## License
 
