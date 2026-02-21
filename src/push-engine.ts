@@ -3,6 +3,7 @@ import { OutlineClient } from "./outline-client";
 import { OutlineSyncSettings } from "./settings";
 import { getOutlineMeta, updateOutlineFrontmatter } from "./frontmatter";
 import { convertToOutlineMarkdown, resolveWikiLinksWithCache } from "./markdown-converter";
+import { resolveConflict, resolveFolderConflictStrategy } from "./conflict-modal";
 
 export class PushEngine {
 	private app: App;
@@ -51,20 +52,41 @@ export class PushEngine {
 
 			const duplicate = await this.client.searchDocumentByTitle(title, targetCollection);
 			if (duplicate) {
-				const updated = await this.client.updateDocument({
-					id: duplicate.id,
-					title,
+				notice.hide();
+				const resolution = await resolveConflict(this.app, title);
+				if (resolution === "cancel") return;
+
+				if (resolution === "overwrite") {
+					const updated = await this.client.updateDocument({
+						id: duplicate.id,
+						title,
+						text: resolvedMarkdown,
+						publish: true,
+					});
+					if (!updated) throw new Error("Update fehlgeschlagen");
+					await updateOutlineFrontmatter(this.app, file, {
+						outline_id: duplicate.id,
+						outline_collection_id: duplicate.collectionId,
+						outline_last_synced: new Date().toISOString(),
+					});
+					new Notice(`✓ "${title}" überschrieben in Outline`);
+					return;
+				}
+
+				const uniqueTitle = await this.findAvailableTitle(title, targetCollection);
+				const created = await this.client.createDocument({
+					title: uniqueTitle,
 					text: resolvedMarkdown,
+					collectionId: targetCollection,
 					publish: true,
 				});
-				if (!updated) throw new Error("Update fehlgeschlagen");
+				if (!created) throw new Error("Erstellen fehlgeschlagen");
 				await updateOutlineFrontmatter(this.app, file, {
-					outline_id: duplicate.id,
-					outline_collection_id: duplicate.collectionId,
+					outline_id: created.id,
+					outline_collection_id: created.collectionId,
 					outline_last_synced: new Date().toISOString(),
 				});
-				notice.hide();
-				new Notice(`✓ "${title}" aktualisiert (Duplikat gefunden)`);
+				new Notice(`✓ "${uniqueTitle}" als Duplikat angelegt`);
 				return;
 			}
 
@@ -103,6 +125,9 @@ export class PushEngine {
 			new Notice("Keine Markdown-Dateien im Ordner gefunden.");
 			return;
 		}
+
+		const folderStrategy = await resolveFolderConflictStrategy(this.app);
+		if (folderStrategy === "cancel") return;
 
 		const notice = new Notice(`Pushing ${files.length} Dateien zu Outline…`, 0);
 		let success = 0;
@@ -147,17 +172,34 @@ export class PushEngine {
 
 				const duplicate = await this.client.searchDocumentByTitle(title, targetCollection);
 				if (duplicate) {
-					await this.client.updateDocument({
-						id: duplicate.id,
-						title,
-						text: resolvedMarkdown,
-						publish: true,
-					});
-					await updateOutlineFrontmatter(this.app, file, {
-						outline_id: duplicate.id,
-						outline_collection_id: duplicate.collectionId,
-						outline_last_synced: new Date().toISOString(),
-					});
+					if (folderStrategy === "overwrite") {
+						await this.client.updateDocument({
+							id: duplicate.id,
+							title,
+							text: resolvedMarkdown,
+							publish: true,
+						});
+						await updateOutlineFrontmatter(this.app, file, {
+							outline_id: duplicate.id,
+							outline_collection_id: duplicate.collectionId,
+							outline_last_synced: new Date().toISOString(),
+						});
+					} else {
+						const uniqueTitle = await this.findAvailableTitle(title, targetCollection);
+						const dup = await this.client.createDocument({
+							title: uniqueTitle,
+							text: resolvedMarkdown,
+							collectionId: targetCollection,
+							publish: true,
+						});
+						if (dup) {
+							await updateOutlineFrontmatter(this.app, file, {
+								outline_id: dup.id,
+								outline_collection_id: dup.collectionId,
+								outline_last_synced: new Date().toISOString(),
+							});
+						}
+					}
 					const refreshed = await this.app.vault.read(file);
 					fileContentCache.set(file.path, refreshed);
 					success++;
@@ -265,6 +307,16 @@ export class PushEngine {
 			bmp: "image/bmp",
 		};
 		return map[ext] ?? "application/octet-stream";
+	}
+
+	private async findAvailableTitle(baseTitle: string, collectionId: string): Promise<string> {
+		let counter = 1;
+		let candidate = `${baseTitle}-${counter}`;
+		while (await this.client.searchDocumentByTitle(candidate, collectionId)) {
+			counter++;
+			candidate = `${baseTitle}-${counter}`;
+		}
+		return candidate;
 	}
 
 	private validateConfig(): boolean {
