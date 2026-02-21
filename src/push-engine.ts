@@ -307,9 +307,12 @@ export class PushEngine {
 			});
 
 			if (!attachmentMeta) {
+				console.error(`[Outline Sync] attachments.create returned null for "${imageFile.name}"`);
 				result = result.replace(img.placeholder, `*(Upload fehlgeschlagen: ${imageFile.name})*`);
 				continue;
 			}
+
+			console.log(`[Outline Sync] attachments.create OK – uploadUrl: ${attachmentMeta.uploadUrl}, formKeys: ${Object.keys(attachmentMeta.form ?? {}).join(",")}, attachmentUrl: ${attachmentMeta.attachment.url}`);
 
 			const uploaded = await this.client.uploadAttachmentToStorage(
 				attachmentMeta.uploadUrl,
@@ -317,6 +320,8 @@ export class PushEngine {
 				fileData,
 				contentType
 			);
+
+			console.log(`[Outline Sync] uploadAttachmentToStorage result: ${uploaded}`);
 
 			if (uploaded) {
 				result = result.replace(img.placeholder, `![${imageFile.basename}](${attachmentMeta.attachment.url})`);
