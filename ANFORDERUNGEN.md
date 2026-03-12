@@ -32,7 +32,7 @@
 Obsidian verwendet einen eigenen Markdown-Dialekt:
 - `[[Wiki-Links]]` → Outline kennt diese nicht nativ; können aber als Outline-Backlinks aufgelöst werden, wenn das Zieldokument bereits in Outline existiert
 - `![[Eingebettete Dateien]]` → erfordert separaten Attachment-Upload-Flow
-- `> [!NOTE] Callouts` → Outline-spezifische Syntax unterscheidet sich
+- `> [!NOTE] Callouts` → Outline nutzt Fence-Syntax (`:::warning`, `:::info`, `:::success`, `:::tip` … mit schließendem `:::`)
 - `#Tags` im Text → Outline hat eigene Tag-Verwaltung
 - YAML-Frontmatter (`---`) → Outline hat `DataAttributes`, aber kein direktes Mapping
 
@@ -143,7 +143,7 @@ Echte Zwei-Wege-Sync ist überentwickelt und fehleranfällig:
 |---|---|---|
 | F-30 | `[[Wiki-Links]]` werden aufgelöst: Existiert ein Obsidian-Dokument mit diesem Namen bereits in Outline (erkennbar an `outline_id`), wird ein echter Outline-Dokumentlink eingefügt; sonst wird der Link-Text als Klartext beibehalten | Muss |
 | F-31 | `![[Eingebettete Bilder]]` werden erkannt, die Datei zu Outline hochgeladen und die URL im Markdown ersetzt | Muss |
-| F-32 | Obsidian-Callouts (`> [!NOTE]`) werden in Standard-Blockquotes konvertiert | Soll |
+| F-32 | Obsidian-Callouts (`> [!NOTE]` etc.) werden in Outline-Callout-Format konvertiert (`:::type` … Inhalt … `:::`) | Soll |
 | F-33 | `#Tags` im Text werden erkannt und als Outline-Tags gesetzt | Kann |
 
 ### 3.5 Fehlerbehandlung

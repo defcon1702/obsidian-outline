@@ -7,6 +7,7 @@ export interface OutlineSyncSettings {
 	apiKey: string;
 	targetCollectionId: string;
 	targetCollectionName: string;
+	removeToc: boolean;
 }
 
 export const DEFAULT_SETTINGS: OutlineSyncSettings = {
@@ -14,6 +15,7 @@ export const DEFAULT_SETTINGS: OutlineSyncSettings = {
 	apiKey: "",
 	targetCollectionId: "",
 	targetCollectionName: "",
+	removeToc: false,
 };
 
 export class OutlineSyncSettingTab extends PluginSettingTab {
@@ -100,11 +102,23 @@ export class OutlineSyncSettingTab extends PluginSettingTab {
 					);
 					dropdown.setValue(this.plugin.settings.targetCollectionId);
 				}
-				dropdown.onChange(async (value) => {
-					this.plugin.settings.targetCollectionId = value;
-					await this.plugin.saveSettings();
-				});
+			dropdown.onChange(async (value) => {
+				this.plugin.settings.targetCollectionId = value;
+				await this.plugin.saveSettings();
 			});
+		});
+
+		new Setting(containerEl)
+			.setName("Remove table of contents")
+			.setDesc("Strip TOC blocks (lists of [[#section]] links) before pushing to Outline")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.removeToc)
+					.onChange(async (value) => {
+						this.plugin.settings.removeToc = value;
+						await this.plugin.saveSettings();
+					})
+			);
 	}
 
 	async loadCollections(): Promise<void> {

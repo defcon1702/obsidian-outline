@@ -1,5 +1,17 @@
 import { App, TFile, Vault } from "obsidian";
-import { getOutlineMeta, stripFrontmatter } from "./frontmatter";
+import {
+	runPipeline,
+	createContext,
+	FrontmatterTransformer,
+	CalloutTransformer,
+	WikiLinkTransformer,
+	ImageDetector,
+	TocRemover,
+	getOutlineMeta,
+	type ImageRef,
+	type WikiLinkResolver,
+	type TransformerInstance,
+} from "./plugins";
 
 export interface EmbeddedImage {
 	obsidianPath: string;
@@ -11,121 +23,104 @@ export interface ConvertResult {
 	images: EmbeddedImage[];
 }
 
-const WIKI_LINK_REGEX = /\[\[([^\]|#]+)(?:#[^\]|]*)?\|?([^\]]*)\]\]/g;
-const EMBEDDED_IMAGE_WIKI_REGEX = /!\[\[([^\]|]+\.(png|jpg|jpeg|gif|webp|svg|bmp))(?:\|[^\]]*)?\]\]/gi;
-const EMBEDDED_IMAGE_MD_REGEX = /!\[([^\]]*)\]\(([^)]+\.(png|jpg|jpeg|gif|webp|svg|bmp))\)/gi;
-const CALLOUT_REGEX = /^> \[!(\w+)\]([-+]?)[ \t]*(.*)/gm;
+export interface ConvertOptions {
+	removeToc?: boolean;
+}
 
 export async function convertToOutlineMarkdown(
 	app: App,
 	file: TFile,
-	rawContent: string
+	rawContent: string,
+	options?: ConvertOptions,
 ): Promise<ConvertResult> {
-	let markdown = stripFrontmatter(rawContent);
-	const images: EmbeddedImage[] = [];
+	const wikiLinkResolver = buildWikiLinkResolver(app);
 
-	markdown = await resolveEmbeddedImages(app, file, markdown, images);
-	markdown = await resolveWikiLinks(app, markdown);
-	markdown = convertCallouts(markdown);
+	const ctx = createContext(rawContent, file.basename, file.path);
 
-	return { markdown, images };
-}
+	const transformers: TransformerInstance[] = [
+		FrontmatterTransformer(),
+		...(options?.removeToc ? [TocRemover()] : []),
+		ImageDetector(),
+		WikiLinkTransformer({ resolve: wikiLinkResolver }),
+		CalloutTransformer(),
+	];
 
-async function resolveEmbeddedImages(
-	app: App,
-	sourceFile: TFile,
-	content: string,
-	images: EmbeddedImage[]
-): Promise<string> {
-	const wikiMatches = [...content.matchAll(EMBEDDED_IMAGE_WIKI_REGEX)];
-	const mdMatches = [...content.matchAll(EMBEDDED_IMAGE_MD_REGEX)];
+	const result = runPipeline(ctx, transformers);
 
-	for (const match of wikiMatches) {
-		const imageName = match[1];
-		const placeholder = `__OUTLINE_IMG_${images.length}__`;
-		const imageFile = app.metadataCache.getFirstLinkpathDest(imageName, sourceFile.path);
-		if (imageFile instanceof TFile) {
-			images.push({ obsidianPath: imageFile.path, placeholder });
-			content = content.replace(match[0], placeholder);
-		} else {
-			content = content.replace(match[0], `*(Image not found: ${imageName})*`);
-		}
-	}
+	const detectedImages =
+		(result.meta.plugins["ImageDetector"]?.["images"] as ImageRef[] | undefined) ?? [];
 
-	for (const match of mdMatches) {
-		const rawPath = match[2];
-		const placeholder = `__OUTLINE_IMG_${images.length}__`;
-		const decoded = decodeURIComponent(rawPath);
-		const imageFile =
-			app.metadataCache.getFirstLinkpathDest(decoded, sourceFile.path) ??
-			app.vault.getAbstractFileByPath(decoded) ??
-			app.vault.getAbstractFileByPath(rawPath);
-		if (imageFile instanceof TFile) {
-			images.push({ obsidianPath: imageFile.path, placeholder });
-			content = content.replace(match[0], placeholder);
-		} else {
-			content = content.replace(match[0], `*(Image not found: ${rawPath})*`);
-		}
-	}
+	const images = resolveImagePaths(app, file, detectedImages);
 
-	return content;
-}
-
-async function resolveWikiLinks(app: App, content: string): Promise<string> {
-	const resolved = content.replace(WIKI_LINK_REGEX, (_match, linkTarget: string, alias: string) => {
-		const displayText = alias.trim() || linkTarget.trim();
-		const targetFile = app.metadataCache.getFirstLinkpathDest(linkTarget.trim(), "");
-
-		if (targetFile instanceof TFile) {
-			const cache = app.vault.cachedRead(targetFile);
-			void cache.then(async (rawContent) => {
-				const meta = getOutlineMeta(rawContent);
-				if (meta.outline_id) {
-					return `[${displayText}](doc:${meta.outline_id})`;
-				}
-			});
-
-			const cachedContent = (app.vault as Vault & { readCache?: Map<string, string> }).readCache?.get(targetFile.path);
-			if (cachedContent) {
-				const meta = getOutlineMeta(cachedContent);
-				if (meta.outline_id) {
-					return `[${displayText}](doc:${meta.outline_id})`;
-				}
-			}
-		}
-
-		return displayText;
-	});
-
-	return resolved;
+	return { markdown: result.content, images };
 }
 
 export async function resolveWikiLinksWithCache(
 	app: App,
 	content: string,
-	fileContentCache: Map<string, string>
+	fileContentCache: Map<string, string>,
 ): Promise<string> {
-	return content.replace(WIKI_LINK_REGEX, (_match, linkTarget: string, alias: string) => {
-		const displayText = alias.trim() || linkTarget.trim();
-		const targetFile = app.metadataCache.getFirstLinkpathDest(linkTarget.trim(), "");
+	const resolver = buildWikiLinkResolverWithCache(app, fileContentCache);
 
+	const ctx = createContext(content);
+	const result = runPipeline(ctx, [
+		WikiLinkTransformer({ resolve: resolver }),
+	]);
+
+	return result.content;
+}
+
+function buildWikiLinkResolver(app: App): WikiLinkResolver {
+	return (linkTarget: string) => {
+		const targetFile = app.metadataCache.getFirstLinkpathDest(linkTarget, "");
+		if (targetFile instanceof TFile) {
+			const cachedContent = (
+				app.vault as Vault & { readCache?: Map<string, string> }
+			).readCache?.get(targetFile.path);
+			if (cachedContent) {
+				const meta = getOutlineMeta(cachedContent);
+				if (meta.outline_id) return meta.outline_id;
+			}
+		}
+		return null;
+	};
+}
+
+function buildWikiLinkResolverWithCache(
+	app: App,
+	fileContentCache: Map<string, string>,
+): WikiLinkResolver {
+	return (linkTarget: string) => {
+		const targetFile = app.metadataCache.getFirstLinkpathDest(linkTarget, "");
 		if (targetFile instanceof TFile) {
 			const cachedContent = fileContentCache.get(targetFile.path);
 			if (cachedContent) {
 				const meta = getOutlineMeta(cachedContent);
-				if (meta.outline_id) {
-					return `[${displayText}](doc:${meta.outline_id})`;
-				}
+				if (meta.outline_id) return meta.outline_id;
 			}
 		}
-
-		return displayText;
-	});
+		return null;
+	};
 }
 
-function convertCallouts(content: string): string {
-	return content.replace(CALLOUT_REGEX, (_match, type: string, _foldable: string, title: string) => {
-		const label = title.trim() || type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
-		return `> **${label}**`;
-	});
+function resolveImagePaths(
+	app: App,
+	sourceFile: TFile,
+	detected: ImageRef[],
+): EmbeddedImage[] {
+	const images: EmbeddedImage[] = [];
+
+	for (const ref of detected) {
+		const decoded = decodeURIComponent(ref.imageName);
+		const imageFile =
+			app.metadataCache.getFirstLinkpathDest(decoded, sourceFile.path) ??
+			app.vault.getAbstractFileByPath(decoded) ??
+			app.vault.getAbstractFileByPath(ref.imageName);
+
+		if (imageFile instanceof TFile) {
+			images.push({ obsidianPath: imageFile.path, placeholder: ref.placeholder });
+		}
+	}
+
+	return images;
 }

@@ -10,7 +10,7 @@ Push Obsidian notes and folders to your [Outline](https://www.getoutline.com/) k
 - **Smart re-push** – already pushed notes are detected by ID or title (tracked via frontmatter)
 - **Image upload** – embedded images (`![[image.png]]`) are uploaded to Outline automatically
 - **Wiki-link resolution** – `[[Note Name]]` links are converted to real Outline document links if the target has already been pushed
-- **Callout conversion** – Obsidian callouts (`> [!NOTE]`) are converted to standard blockquotes
+- **Callout conversion** – Obsidian callouts (`> [!NOTE]`, `> [!warning]`, etc.) are converted to Outline’s fence format (`:::info`, `:::warning`, `:::success`, `:::tip` … `:::`)
 - Works with **self-hosted** and **cloud** Outline instances
 
 ## Requirements

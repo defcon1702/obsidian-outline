@@ -24,7 +24,9 @@ export class PushEngine {
 
 		try {
 			const rawContent = await this.app.vault.read(file);
-			const { markdown, images } = await convertToOutlineMarkdown(this.app, file, rawContent);
+			const { markdown, images } = await convertToOutlineMarkdown(this.app, file, rawContent, {
+				removeToc: this.settings.removeToc,
+			});
 			const resolvedMarkdown = markdown;
 
 			const meta = getOutlineMeta(rawContent);
@@ -209,7 +211,9 @@ export class PushEngine {
 		fileContentCache: Map<string, string>
 	): Promise<void> {
 		const rawContent = fileContentCache.get(file.path) ?? await this.app.vault.read(file);
-		const { markdown, images } = await convertToOutlineMarkdown(this.app, file, rawContent);
+		const { markdown, images } = await convertToOutlineMarkdown(this.app, file, rawContent, {
+			removeToc: this.settings.removeToc,
+		});
 		const resolvedMarkdown = await resolveWikiLinksWithCache(this.app, markdown, fileContentCache);
 
 		const meta = getOutlineMeta(rawContent);
