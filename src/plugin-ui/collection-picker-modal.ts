@@ -1,5 +1,5 @@
 import { App, Modal, Setting } from "obsidian";
-import type { OutlineCollection } from "./outline-client";
+import type { OutlineCollection } from "../outline-client";
 
 export function pickCollection(
 	app: App,

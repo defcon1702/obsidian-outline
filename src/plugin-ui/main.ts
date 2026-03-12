@@ -1,8 +1,9 @@
 import { Menu, Notice, Plugin, TFile, TFolder } from "obsidian";
-import { OutlineClient } from "./outline-client";
-import type { OutlineCollection } from "./outline-client";
-import { PushEngine } from "./push-engine";
-import { DEFAULT_SETTINGS, OutlineSyncSettingTab, OutlineSyncSettings } from "./settings";
+import { OutlineClient } from "../outline-client";
+import type { OutlineCollection } from "../outline-client";
+import { PushEngine } from "../push-engine";
+import { DEFAULT_SETTINGS, OutlineSyncSettings } from "../settings";
+import { OutlineSyncSettingTab } from "./setting-tab";
 import { pickCollection } from "./collection-picker-modal";
 
 export default class OutlineSyncPlugin extends Plugin {

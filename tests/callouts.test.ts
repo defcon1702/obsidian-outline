@@ -1,5 +1,5 @@
-import { convertCallouts, CalloutTransformer } from "../src/plugins";
-import { createContext, runPipeline } from "../src/plugins";
+import { convertCallouts, CalloutTransformer } from "../src/pipeline";
+import { createContext, runPipeline } from "../src/pipeline";
 
 describe("convertCallouts", () => {
 	it("converts a single-line warning callout", () => {

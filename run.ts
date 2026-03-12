@@ -13,7 +13,7 @@ import {
 	buildDocumentTree,
 	type ImageRef,
 	type DocNode,
-} from "./src/plugins";
+} from "./src/pipeline";
 
 // ---------------------------------------------------------------------------
 // Config

@@ -1,8 +1,8 @@
 import { App, TFile } from "obsidian";
-import type { OutlineFrontmatter } from "./plugins";
+import type { OutlineFrontmatter } from "./pipeline";
 
-export { parseFrontmatter, stripFrontmatter, getOutlineMeta } from "./plugins";
-export type { OutlineFrontmatter } from "./plugins";
+export { parseFrontmatter, stripFrontmatter, getOutlineMeta } from "./pipeline";
+export type { OutlineFrontmatter } from "./pipeline";
 
 export async function updateOutlineFrontmatter(
 	app: App,

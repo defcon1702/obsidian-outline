@@ -1,5 +1,5 @@
-import { removeToc, TocRemover } from "../src/plugins/transformers/toc";
-import { createContext } from "../src/plugins/types";
+import { removeToc, TocRemover } from "../src/pipeline/transformers/tocRemover";
+import { createContext } from "../src/pipeline";
 
 describe("removeToc", () => {
 	it("removes a simple TOC block of section links", () => {

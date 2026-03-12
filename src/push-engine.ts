@@ -3,7 +3,7 @@ import { OutlineClient } from "./outline-client";
 import { OutlineSyncSettings } from "./settings";
 import { getOutlineMeta, updateOutlineFrontmatter } from "./frontmatter";
 import { convertToOutlineMarkdown, resolveWikiLinksWithCache } from "./markdown-converter";
-import { resolveConflict, resolveFolderConflictStrategy } from "./conflict-modal";
+import { resolveConflict, resolveFolderConflictStrategy } from "./plugin-ui/conflict-modal";
 
 export class PushEngine {
 	private app: App;

@@ -11,7 +11,7 @@ import {
 	type ImageRef,
 	type WikiLinkResolver,
 	type TransformerInstance,
-} from "./plugins";
+} from "./pipeline";
 
 export interface EmbeddedImage {
 	obsidianPath: string;

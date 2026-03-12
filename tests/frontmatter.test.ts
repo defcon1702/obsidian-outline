@@ -5,7 +5,7 @@ import {
 	FrontmatterTransformer,
 	createContext,
 	runPipeline,
-} from "../src/plugins";
+} from "../src/pipeline";
 
 describe("parseFrontmatter", () => {
 	it("parses key-value pairs from YAML frontmatter", () => {

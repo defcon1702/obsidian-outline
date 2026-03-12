@@ -3,7 +3,7 @@ import {
 	WikiLinkTransformer,
 	createContext,
 	runPipeline,
-} from "../src/plugins";
+} from "../src/pipeline";
 
 const knownDocs: Record<string, string> = {
 	"My Page": "uuid-my-page",

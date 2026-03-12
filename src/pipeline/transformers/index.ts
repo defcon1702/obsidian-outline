@@ -13,4 +13,4 @@ export type { WikiLinkResolver, WikiLinkOptions } from "./wikiLinks";
 
 export { ImageDetector, detectImages } from "./images";
 
-export { TocRemover, removeToc } from "./toc";
+export { TocRemover, removeToc } from "./tocRemover";

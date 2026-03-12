@@ -1,4 +1,4 @@
-import { buildDocumentTree, type DocNode } from "../src/plugins/documentTree";
+import { buildDocumentTree, type DocNode } from "../src/pipeline";
 
 function titles(nodes: DocNode[]): string[] {
 	return nodes.map((n) => n.title);

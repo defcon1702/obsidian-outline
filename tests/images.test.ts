@@ -4,7 +4,7 @@ import {
 	createContext,
 	runPipeline,
 	type ImageRef,
-} from "../src/plugins";
+} from "../src/pipeline";
 
 describe("detectImages", () => {
 	it("detects wiki-style image embed", () => {

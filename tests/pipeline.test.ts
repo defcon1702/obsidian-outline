@@ -6,7 +6,7 @@ import {
 	WikiLinkTransformer,
 	ImageDetector,
 	type ImageRef,
-} from "../src/plugins";
+} from "../src/pipeline";
 
 const knownDocs: Record<string, string> = {
 	"Other Note": "uuid-other",
