@@ -14,3 +14,5 @@ export type { WikiLinkResolver, WikiLinkOptions } from "./wikiLinks";
 export { ImageDetector, detectImages } from "./images";
 
 export { TocRemover, removeToc } from "./tocRemover";
+
+export { NewlineNormalizer, normalizeNewlines } from "./newlineNormalizer";

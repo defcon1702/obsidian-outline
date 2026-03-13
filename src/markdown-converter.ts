@@ -7,6 +7,7 @@ import {
 	WikiLinkTransformer,
 	ImageDetector,
 	TocRemover,
+	NewlineNormalizer,
 	getOutlineMeta,
 	type ImageRef,
 	type WikiLinkResolver,
@@ -43,6 +44,7 @@ export async function convertToOutlineMarkdown(
 		ImageDetector(),
 		WikiLinkTransformer({ resolve: wikiLinkResolver }),
 		CalloutTransformer(),
+		NewlineNormalizer(),
 	];
 
 	const result = runPipeline(ctx, transformers);
@@ -70,7 +72,7 @@ export async function resolveWikiLinksWithCache(
 	return result.content;
 }
 
-function buildWikiLinkResolver(app: App): WikiLinkResolver {
+export function buildWikiLinkResolver(app: App): WikiLinkResolver {
 	return (linkTarget: string) => {
 		const targetFile = app.metadataCache.getFirstLinkpathDest(linkTarget, "");
 		if (targetFile instanceof TFile) {
