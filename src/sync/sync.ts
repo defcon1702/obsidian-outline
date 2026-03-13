@@ -51,7 +51,7 @@ export async function syncDocument(
 		knownDoc = null;
 	}
 	const duplicate = knownDoc
-		? { id: knownDoc.id, collectionId: knownDoc.collectionId }
+		? { id: knownDoc.id!, collectionId: knownDoc.collectionId! }
 		: await env.api.searchDocumentByTitle(fd.basename, collectionId, parentDocumentId);
 
 	let documentId: string;
@@ -69,14 +69,14 @@ export async function syncDocument(
 
 		if (resolution === "overwrite") {
 			const updated = await env.api.updateDocument({
-				id: duplicate.id,
+				id: duplicate.id!,
 				title: fd.basename,
 				text: markdown,
 				publish: true,
 			});
 			if (!updated) throw new Error("Update failed");
-			documentId = duplicate.id;
-			documentCollectionId = duplicate.collectionId;
+			documentId = duplicate.id!;
+			documentCollectionId = duplicate.collectionId!;
 			action = "updated";
 		} else {
 			const uniqueTitle = await findAvailableTitle(
@@ -93,8 +93,8 @@ export async function syncDocument(
 				parentDocumentId,
 			});
 			if (!created) throw new Error("Create failed");
-			documentId = created.id;
-			documentCollectionId = created.collectionId;
+			documentId = created.id!;
+			documentCollectionId = created.collectionId!;
 			action = "created";
 		}
 	} else {
@@ -106,8 +106,8 @@ export async function syncDocument(
 			parentDocumentId,
 		});
 		if (!created) throw new Error("Create failed");
-		documentId = created.id;
-		documentCollectionId = created.collectionId;
+		documentId = created.id!;
+		documentCollectionId = created.collectionId!;
 		action = "created";
 	}
 
@@ -127,7 +127,7 @@ export async function syncDocument(
 				size: bytes.byteLength,
 				documentId,
 			});
-			if (!attachment) {
+			if (!attachment?.uploadUrl || !attachment.form) {
 				finalMarkdown = finalMarkdown.replace(
 					ref.placeholder,
 					`*(Upload failed: ${resolved.fileName})*`,
@@ -144,7 +144,7 @@ export async function syncDocument(
 				const alt = resolved.fileName.replace(/\.[^.]+$/, "");
 				finalMarkdown = finalMarkdown.replace(
 					ref.placeholder,
-					`![${alt}](${attachment.attachment.url})`,
+					`![${alt}](${attachment.attachment?.url ?? ""})`,
 				);
 				imagesUploaded++;
 			} else {
@@ -251,7 +251,7 @@ export async function syncFolder(
 					options.collectionId,
 					parentDocumentId,
 				);
-				if (existing) {
+				if (existing?.id) {
 					nextParentId = existing.id;
 					env.onProgress?.(`${indent}${prefix}${node.title}… exists ✓`);
 				} else {
@@ -262,7 +262,7 @@ export async function syncFolder(
 						publish: true,
 						parentDocumentId,
 					});
-					if (created) {
+					if (created?.id) {
 						nextParentId = created.id;
 						env.onProgress?.(`${indent}${prefix}${node.title}… created ✓`);
 					}

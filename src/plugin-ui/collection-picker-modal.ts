@@ -1,9 +1,9 @@
 import { App, Modal, Setting } from "obsidian";
-import type { OutlineCollection } from "../outline-client";
+import type { Collection } from "../outline-client";
 
 export function pickCollection(
 	app: App,
-	collections: OutlineCollection[],
+	collections: Collection[],
 	defaultCollectionId: string
 ): Promise<string | null> {
 	return new Promise((resolve) => {
@@ -12,13 +12,13 @@ export function pickCollection(
 }
 
 class CollectionPickerModal extends Modal {
-	private collections: OutlineCollection[];
+	private collections: Collection[];
 	private selectedId: string;
 	private resolve: (id: string | null) => void;
 
 	constructor(
 		app: App,
-		collections: OutlineCollection[],
+		collections: Collection[],
 		defaultCollectionId: string,
 		resolve: (id: string | null) => void
 	) {
@@ -39,7 +39,7 @@ class CollectionPickerModal extends Modal {
 			.setDesc("Where should the document be pushed to?")
 			.addDropdown((dropdown) => {
 				for (const col of this.collections) {
-					dropdown.addOption(col.id, col.name);
+					dropdown.addOption(col.id ?? "", col.name ?? "");
 				}
 				dropdown.setValue(this.selectedId);
 				dropdown.onChange((value) => {

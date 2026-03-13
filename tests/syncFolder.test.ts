@@ -1,13 +1,13 @@
 import { syncFolder } from "../src/sync/sync";
 import type { SyncOptions, SyncEnv, FileDescriptor } from "../src/sync/types";
-import type { IOutlineApi, OutlineDocument, OutlineCollection, AttachmentCreateResult } from "../src/outline-api/types";
+import type { IOutlineApi, Collection, Document } from "../src/outline-api/types";
 
 function makeFakeApi(): IOutlineApi & {
 	created: { title: string; parentDocumentId?: string; text: string }[];
 	updated: { id: string; title: string; text: string }[];
 } {
 	let nextId = 1;
-	const docs = new Map<string, OutlineDocument>();
+	const docs = new Map<string, Document>();
 
 	const api: ReturnType<typeof makeFakeApi> = {
 		created: [],
@@ -15,23 +15,21 @@ function makeFakeApi(): IOutlineApi & {
 		async validateAuth() {
 			return "Test User";
 		},
-		async listCollections(): Promise<OutlineCollection[] | null> {
+		async listCollections(): Promise<Collection[] | null> {
 			return [];
 		},
 		async getDocument(id: string) {
 			return docs.get(id) ?? null;
 		},
 		async createDocument(params) {
-			const doc: OutlineDocument = {
+			const doc: Document = {
 				id: `doc-${nextId++}`,
 				title: params.title,
 				text: params.text,
-				url: `/doc/${nextId}`,
 				collectionId: params.collectionId,
 				parentDocumentId: params.parentDocumentId,
-				updatedAt: new Date().toISOString(),
 			};
-			docs.set(doc.id, doc);
+			docs.set(doc.id!, doc);
 			api.created.push({
 				title: params.title,
 				parentDocumentId: params.parentDocumentId,

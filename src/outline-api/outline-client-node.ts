@@ -8,7 +8,8 @@ import {
 	documentsSearch,
 	attachmentsCreate,
 } from "./generated-client/outlineAPI";
-import type { IOutlineApi, OutlineCollection, OutlineDocument, AttachmentCreateResult } from "./types";
+import type { Collection, Document, AttachmentsCreate200Data } from "./generated-client/outlineAPI";
+import type { IOutlineApi } from "./types";
 
 export class OutlineClientNode implements IOutlineApi {
 	private baseUrl: string;
@@ -23,29 +24,28 @@ export class OutlineClientNode implements IOutlineApi {
 	async validateAuth(): Promise<string | null> {
 		try {
 			const res = await authInfo();
-			if (res.status !== 200 || !("data" in res.data)) return null;
-			const user = (res.data as { data?: { user?: { name?: string } } }).data?.user;
-			return user?.name ?? "Unknown";
+			if (res.status !== 200) return null;
+			return res.data.data?.user?.name ?? "Unknown";
 		} catch {
 			return null;
 		}
 	}
 
-	async listCollections(): Promise<OutlineCollection[] | null> {
+	async listCollections(): Promise<Collection[] | null> {
 		try {
 			const res = await collectionsList({ limit: 100 });
-			if (res.status !== 200 || !res.data?.data) return null;
-			return res.data.data as OutlineCollection[];
+			if (res.status !== 200) return null;
+			return res.data.data ?? null;
 		} catch {
 			return null;
 		}
 	}
 
-	async getDocument(id: string): Promise<OutlineDocument | null> {
+	async getDocument(id: string): Promise<Document | null> {
 		try {
 			const res = await documentsInfo({ id });
-			if (res.status !== 200 || !res.data?.data) return null;
-			return res.data.data as unknown as OutlineDocument;
+			if (res.status !== 200) return null;
+			return res.data.data ?? null;
 		} catch {
 			return null;
 		}
@@ -57,11 +57,11 @@ export class OutlineClientNode implements IOutlineApi {
 		collectionId: string;
 		publish: boolean;
 		parentDocumentId?: string;
-	}): Promise<OutlineDocument | null> {
+	}): Promise<Document | null> {
 		try {
 			const res = await documentsCreate(params);
-			if (res.status !== 200 || !res.data?.data) return null;
-			return res.data.data as unknown as OutlineDocument;
+			if (res.status !== 200) return null;
+			return res.data.data ?? null;
 		} catch {
 			return null;
 		}
@@ -72,11 +72,11 @@ export class OutlineClientNode implements IOutlineApi {
 		title: string;
 		text: string;
 		publish: boolean;
-	}): Promise<OutlineDocument | null> {
+	}): Promise<Document | null> {
 		try {
 			const res = await documentsUpdate(params);
-			if (res.status !== 200 || !res.data?.data) return null;
-			return res.data.data as unknown as OutlineDocument;
+			if (res.status !== 200) return null;
+			return res.data.data ?? null;
 		} catch {
 			return null;
 		}
@@ -86,20 +86,20 @@ export class OutlineClientNode implements IOutlineApi {
 		title: string,
 		collectionId: string,
 		parentDocumentId?: string,
-	): Promise<OutlineDocument | null> {
+	): Promise<Document | null> {
 		try {
 			const res = await documentsSearch({
 				query: title,
 				collectionId,
 				limit: 25,
 			});
-			if (res.status !== 200 || !res.data?.data) return null;
-			const exact = res.data.data.find(
+			if (res.status !== 200) return null;
+			const exact = res.data.data?.find(
 				(r) =>
 					r.document?.title?.toLowerCase() === title.toLowerCase() &&
 					(r.document?.parentDocumentId ?? undefined) === parentDocumentId,
 			);
-			return (exact?.document as unknown as OutlineDocument) ?? null;
+			return exact?.document ?? null;
 		} catch {
 			return null;
 		}
@@ -110,11 +110,11 @@ export class OutlineClientNode implements IOutlineApi {
 		contentType: string;
 		size: number;
 		documentId?: string;
-	}): Promise<AttachmentCreateResult | null> {
+	}): Promise<AttachmentsCreate200Data | null> {
 		try {
 			const res = await attachmentsCreate(params);
-			if (res.status !== 200 || !res.data?.data) return null;
-			return res.data.data as unknown as AttachmentCreateResult;
+			if (res.status !== 200) return null;
+			return res.data.data ?? null;
 		} catch {
 			return null;
 		}
@@ -122,7 +122,7 @@ export class OutlineClientNode implements IOutlineApi {
 
 	async uploadAttachmentToStorage(
 		uploadUrl: string,
-		form: Record<string, string>,
+		form: Record<string, unknown>,
 		fileData: ArrayBuffer,
 		contentType: string,
 	): Promise<boolean> {
@@ -132,7 +132,7 @@ export class OutlineClientNode implements IOutlineApi {
 
 		const formData = new FormData();
 		for (const [key, value] of Object.entries(form)) {
-			formData.append(key, value);
+			formData.append(key, String(value));
 		}
 		formData.append("file", new Blob([fileData], { type: contentType }), "upload");
 

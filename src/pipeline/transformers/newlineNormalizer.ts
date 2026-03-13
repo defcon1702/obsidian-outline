@@ -26,8 +26,12 @@ function isPlainTextLine(line: string): boolean {
  * as a visible line break. CommonMark (used by Outline) treats a single \n
  * as a space within the same paragraph, effectively swallowing it.
  *
- * This transformer converts single \n between consecutive plain-text lines
- * into \n\n so Outline renders them as separate paragraphs.
+ * This transformer:
+ * 1. Converts single \n between consecutive plain-text lines into \n\n
+ *    so Outline renders them as separate paragraphs.
+ * 2. Triples existing blank lines (\n\n → \n\n\n\n) because Outline's
+ *    renderer needs 3+ blank lines to produce a visible gap; fewer
+ *    blank lines are collapsed to a standard paragraph break.
  */
 export function normalizeNewlines(content: string): string {
 	const lines = content.split("\n");
@@ -52,13 +56,13 @@ export function normalizeNewlines(content: string): string {
 
 		result.push(line);
 
-		if (
-			!inCodeBlock &&
-			i < lines.length - 1 &&
-			isPlainTextLine(line) &&
-			isPlainTextLine(lines[i + 1])
-		) {
-			result.push("");
+		if (!inCodeBlock && i < lines.length - 1) {
+			if (trimmed === "") {
+				result.push("");
+				result.push("");
+			} else if (isPlainTextLine(line) && isPlainTextLine(lines[i + 1])) {
+				result.push("");
+			}
 		}
 	}
 

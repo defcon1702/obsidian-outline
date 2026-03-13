@@ -1,7 +1,7 @@
 export type {
 	IOutlineApi,
-	OutlineCollection,
-	OutlineDocument,
-	AttachmentCreateResult,
+	Collection,
+	Document,
+	AttachmentsCreate200Data,
 } from "./types";
 export { OutlineClientNode } from "./outline-client-node";

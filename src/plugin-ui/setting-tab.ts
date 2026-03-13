@@ -1,6 +1,6 @@
 import { App, DropdownComponent, Notice, PluginSettingTab, Setting } from "obsidian";
 import type OutlineSyncPlugin from "./main";
-import type { OutlineCollection } from "../outline-client";
+import type { Collection } from "../outline-client";
 import type { OutlineSyncSettings } from "../settings";
 
 export class OutlineSyncSettingTab extends PluginSettingTab {
@@ -126,8 +126,8 @@ export class OutlineSyncSettingTab extends PluginSettingTab {
 
 		for (const col of collections) {
 			const opt = document.createElement("option");
-			opt.value = col.id;
-			opt.text = col.name;
+			opt.value = col.id ?? "";
+			opt.text = col.name ?? "";
 			if (col.id === this.plugin.settings.targetCollectionId) {
 				opt.selected = true;
 			}
@@ -135,7 +135,7 @@ export class OutlineSyncSettingTab extends PluginSettingTab {
 		}
 
 		dropdown.onChange(async (value) => {
-			const selected = collections.find((c: OutlineCollection) => c.id === value);
+			const selected = collections.find((c: Collection) => c.id === value);
 			this.plugin.settings.targetCollectionId = value;
 			this.plugin.settings.targetCollectionName = selected?.name ?? "";
 			await this.plugin.saveSettings();

@@ -55,9 +55,9 @@ async function main() {
 			const match = collections.find(
 				(c) =>
 					c.urlId === OUTLINE_COLLECTION_ID ||
-					c.name.toLowerCase() === OUTLINE_COLLECTION_ID.toLowerCase(),
+					c.name?.toLowerCase() === OUTLINE_COLLECTION_ID.toLowerCase(),
 			);
-			if (match) {
+			if (match?.id) {
 				collectionId = match.id;
 				console.log(`Resolved "${OUTLINE_COLLECTION_ID}" → ${match.name}`);
 			}
@@ -66,7 +66,7 @@ async function main() {
 	if (!collectionId) {
 		console.log("\nAvailable collections:");
 		collections.forEach((c, i) =>
-			console.log(`  ${i + 1}. ${c.name}  (id: ${c.id}, slug: ${c.urlId ?? "—"})`),
+			console.log(`  ${i + 1}. ${c.name ?? "—"}  (id: ${c.id ?? "—"}, slug: ${c.urlId ?? "—"})`),
 		);
 		console.log("\nSet OUTLINE_COLLECTION_ID in .env to a UUID, slug, or name from the list above.");
 		process.exit(1);
