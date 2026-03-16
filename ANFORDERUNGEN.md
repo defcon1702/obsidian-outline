@@ -4,14 +4,14 @@
 **Datum:** 2026-02-20
 **Status:** Freigegeben für Implementierung
 
-| Entscheidung | Wert |
-|---|---|
-| Outline-Instanz | Self-Hosted |
-| Sync-Richtung | One-Way: Obsidian → Outline (Push only) |
-| Ziel-Struktur | Eine konfigurierbare Ziel-Collection; manuelle Restrukturierung in Outline |
-| Konflikt-Strategie | Obsidian gewinnt immer (Overwrite) |
-| Bilder im MVP | Ja |
-| Store-Konformität | Ja, von Anfang an |
+| Entscheidung       | Wert                                                                       |
+| ------------------ | -------------------------------------------------------------------------- |
+| Outline-Instanz    | Self-Hosted                                                                |
+| Sync-Richtung      | One-Way: Obsidian → Outline (Push only)                                    |
+| Ziel-Struktur      | Eine konfigurierbare Ziel-Collection; manuelle Restrukturierung in Outline |
+| Konflikt-Strategie | Obsidian gewinnt immer (Overwrite)                                         |
+| Bilder im MVP      | Ja                                                                         |
+| Store-Konformität  | Ja, von Anfang an                                                          |
 
 ---
 
@@ -29,7 +29,9 @@
 > ⚠️ **Diese Punkte müssen vor der Implementierung geklärt sein.**
 
 #### Markdown-Dialekt-Inkompatibilität (HOCH)
+
 Obsidian verwendet einen eigenen Markdown-Dialekt:
+
 - `[[Wiki-Links]]` → Outline kennt diese nicht nativ; können aber als Outline-Backlinks aufgelöst werden, wenn das Zieldokument bereits in Outline existiert
 - `![[Eingebettete Dateien]]` → erfordert separaten Attachment-Upload-Flow
 - `> [!NOTE] Callouts` → Outline nutzt Fence-Syntax (`:::warning`, `:::info`, `:::success`, `:::tip` … mit schließendem `:::`)
@@ -39,17 +41,20 @@ Obsidian verwendet einen eigenen Markdown-Dialekt:
 **Konsequenz:** Ohne einen Konverter werden Dokumente auf Outline unleserlich oder fehlerhaft dargestellt.
 
 #### Strukturelle Inkompatibilität (ENTSCHÄRFT)
-| Obsidian | Outline |
-|---|---|
-| Vault (Root-Ordner) | Workspace |
-| Ordner | Collection |
-| Markdown-Datei | Document |
-| Attachment-Ordner | Attachments (separater Upload-Flow) |
+
+| Obsidian            | Outline                             |
+| ------------------- | ----------------------------------- |
+| Vault (Root-Ordner) | Workspace                           |
+| Ordner              | Collection                          |
+| Markdown-Datei      | Document                            |
+| Attachment-Ordner   | Attachments (separater Upload-Flow) |
 
 **Entscheidung:** Kein automatisches Hierarchie-Mapping. Der Nutzer wählt eine Ziel-Collection; alle gepushten Dokumente landen dort flach. Restrukturierung erfolgt manuell in Outline. Das eliminiert das Komplexitätsproblem vollständig.
 
 #### Bidirektionale Synchronisation (BEWUSST AUSGESCHLOSSEN)
+
 Echte Zwei-Wege-Sync ist überentwickelt und fehleranfällig:
+
 - Was passiert, wenn dieselbe Datei in Obsidian **und** auf Outline gleichzeitig geändert wurde?
 - Obsidian hat kein natives Conflict-Resolution-System
 - **Entscheidung:** Reines One-Way-Push (Obsidian → Outline). Restrukturierung erfolgt manuell in Outline.
@@ -57,16 +62,19 @@ Echte Zwei-Wege-Sync ist überentwickelt und fehleranfällig:
 > **Hinweis zu Webhooks:** Outline unterstützt Webhooks (Settings → Webhooks). Diese erfordern jedoch einen externen HTTP-Server als Empfänger. Ein Obsidian-Plugin läuft lokal ohne eingehende Verbindungen – Webhooks sind daher für das Plugin selbst nicht direkt nutzbar. Relevant erst bei einem zukünftigen Companion-Server.
 
 #### Attachments / Bilder (MITTEL)
+
 - Bilder in Obsidian sind lokale Dateien
 - Outline erfordert einen zweistufigen Upload: erst `attachments.create` aufrufen, dann die Datei per signierter URL hochladen
 - Eingebettete Bilder in Markdown müssen nach dem Upload durch Outline-URLs ersetzt werden
 
 #### Rate Limiting (MITTEL)
+
 - Outline begrenzt API-Anfragen (429-Status mit `Retry-After`-Header)
 - Bei großen Vaults (100+ Dateien) kann ein initialer Sync die Rate Limits auslösen
 - Eine Queue mit Backoff-Strategie ist zwingend erforderlich
 
 #### Sicherheit (MITTEL)
+
 - Der Outline API-Key muss sicher in den Obsidian Plugin-Settings gespeichert werden
 - Obsidian speichert Plugin-Daten in `.obsidian/plugins/[plugin-id]/data.json` – diese Datei sollte **nicht** in Git eingecheckt werden
 
@@ -108,70 +116,70 @@ Echte Zwei-Wege-Sync ist überentwickelt und fehleranfällig:
 
 ### 3.1 Authentifizierung & Konfiguration
 
-| ID | Anforderung | Priorität |
-|---|---|---|
-| F-01 | Der Nutzer kann in den Plugin-Settings eine Outline-Instanz-URL konfigurieren (Cloud oder Self-Hosted) | Muss |
-| F-02 | Der Nutzer kann einen Outline API-Key hinterlegen | Muss |
-| F-03 | Das Plugin validiert den API-Key beim Speichern und zeigt Feedback an | Muss |
-| F-04 | Der Nutzer wählt eine Ziel-Collection aus einer Liste aller verfügbaren Collections (Dropdown) | Muss |
-| F-05 | ~~Ordner-Mapping~~ → entfällt (Phase 2) | - |
+| ID   | Anforderung                                                                                            | Priorität |
+| ---- | ------------------------------------------------------------------------------------------------------ | --------- |
+| F-01 | Der Nutzer kann in den Plugin-Settings eine Outline-Instanz-URL konfigurieren (Cloud oder Self-Hosted) | Muss      |
+| F-02 | Der Nutzer kann einen Outline API-Key hinterlegen                                                      | Muss      |
+| F-03 | Das Plugin validiert den API-Key beim Speichern und zeigt Feedback an                                  | Muss      |
+| F-04 | Der Nutzer wählt eine Ziel-Collection aus einer Liste aller verfügbaren Collections (Dropdown)         | Muss      |
+| F-05 | ~~Ordner-Mapping~~ → entfällt (Phase 2)                                                                | -         |
 
 ### 3.2 Push: Einzelnes Dokument
 
-| ID | Anforderung | Priorität |
-|---|---|---|
-| F-10 | Der Nutzer kann eine aktive Datei per Rechtsklick-Menü oder Command Palette auf Outline pushen | Muss |
-| F-11 | Beim ersten Push wird ein neues Outline-Dokument erstellt | Muss |
-| F-12 | Bei einem erneuten Push wird das bestehende Outline-Dokument aktualisiert (Update, nicht Duplikat) | Muss |
-| F-13 | Die Outline-Dokument-ID wird im YAML-Frontmatter der Obsidian-Datei gespeichert (`outline_id`) | Muss |
-| F-14 | Der Nutzer wird nach dem Push mit einem Link zum Outline-Dokument benachrichtigt | Soll |
-| F-15 | YAML-Frontmatter wird vor dem Push aus dem Markdown-Inhalt entfernt | Muss |
+| ID   | Anforderung                                                                                        | Priorität |
+| ---- | -------------------------------------------------------------------------------------------------- | --------- |
+| F-10 | Der Nutzer kann eine aktive Datei per Rechtsklick-Menü oder Command Palette auf Outline pushen     | Muss      |
+| F-11 | Beim ersten Push wird ein neues Outline-Dokument erstellt                                          | Muss      |
+| F-12 | Bei einem erneuten Push wird das bestehende Outline-Dokument aktualisiert (Update, nicht Duplikat) | Muss      |
+| F-13 | Die Outline-Dokument-ID wird im YAML-Frontmatter der Obsidian-Datei gespeichert (`outline_id`)     | Muss      |
+| F-14 | Der Nutzer wird nach dem Push mit einem Link zum Outline-Dokument benachrichtigt                   | Soll      |
+| F-15 | YAML-Frontmatter wird vor dem Push aus dem Markdown-Inhalt entfernt                                | Muss      |
 
 ### 3.3 Push: Ordner-Inhalt
 
-| ID | Anforderung | Priorität |
-|---|---|---|
-| F-20 | Der Nutzer kann einen Obsidian-Ordner per Rechtsklick pushen – alle Markdown-Dateien landen flach in der Ziel-Collection | Muss |
-| F-21 | Bereits gepushte Dokumente (erkennbar an `outline_id` im Frontmatter) werden aktualisiert, neue werden erstellt | Muss |
-| F-22 | ~~Hierarchie-Mapping~~ → entfällt; keine automatische Ordnerstruktur-Abbildung | - |
-| F-23 | Der Nutzer kann vor dem Ordner-Push eine Vorschau der zu übertragenden Dateien sehen | Kann |
-| F-24 | Nicht-Markdown-Dateien werden beim Ordner-Push übersprungen (mit Hinweis) | Muss |
+| ID   | Anforderung                                                                                                              | Priorität |
+| ---- | ------------------------------------------------------------------------------------------------------------------------ | --------- |
+| F-20 | Der Nutzer kann einen Obsidian-Ordner per Rechtsklick pushen – alle Markdown-Dateien landen flach in der Ziel-Collection | Muss      |
+| F-21 | Bereits gepushte Dokumente (erkennbar an `outline_id` im Frontmatter) werden aktualisiert, neue werden erstellt          | Muss      |
+| F-22 | ~~Hierarchie-Mapping~~ → entfällt; keine automatische Ordnerstruktur-Abbildung                                           | -         |
+| F-23 | Der Nutzer kann vor dem Ordner-Push eine Vorschau der zu übertragenden Dateien sehen                                     | Kann      |
+| F-24 | Nicht-Markdown-Dateien werden beim Ordner-Push übersprungen (mit Hinweis)                                                | Muss      |
 
 ### 3.4 Markdown-Konvertierung
 
-| ID | Anforderung | Priorität |
-|---|---|---|
-| F-30 | `[[Wiki-Links]]` werden aufgelöst: Existiert ein Obsidian-Dokument mit diesem Namen bereits in Outline (erkennbar an `outline_id`), wird ein echter Outline-Dokumentlink eingefügt; sonst wird der Link-Text als Klartext beibehalten | Muss |
-| F-31 | `![[Eingebettete Bilder]]` werden erkannt, die Datei zu Outline hochgeladen und die URL im Markdown ersetzt | Muss |
-| F-32 | Obsidian-Callouts (`> [!NOTE]` etc.) werden in Outline-Callout-Format konvertiert (`:::type` … Inhalt … `:::`) | Soll |
-| F-33 | `#Tags` im Text werden erkannt und als Outline-Tags gesetzt | Kann |
+| ID   | Anforderung                                                                                                                                                                                                                           | Priorität |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| F-30 | `[[Wiki-Links]]` werden aufgelöst: Existiert ein Obsidian-Dokument mit diesem Namen bereits in Outline (erkennbar an `outline_id`), wird ein echter Outline-Dokumentlink eingefügt; sonst wird der Link-Text als Klartext beibehalten | Muss      |
+| F-31 | `![[Eingebettete Bilder]]` werden erkannt, die Datei zu Outline hochgeladen und die URL im Markdown ersetzt                                                                                                                           | Muss      |
+| F-32 | Obsidian-Callouts (`> [!NOTE]` etc.) werden in Outline-Callout-Format konvertiert (`:::type` … Inhalt … `:::`)                                                                                                                        | Soll      |
+| F-33 | `#Tags` im Text werden erkannt und als Outline-Tags gesetzt                                                                                                                                                                           | Kann      |
 
 ### 3.5 Fehlerbehandlung
 
-| ID | Anforderung | Priorität |
-|---|---|---|
-| F-40 | Bei Rate-Limiting (429) wartet das Plugin die `Retry-After`-Zeit ab und wiederholt den Request | Muss |
-| F-41 | Netzwerkfehler werden dem Nutzer verständlich kommuniziert | Muss |
-| F-42 | Bei einem fehlgeschlagenen Push bleibt die Obsidian-Datei unverändert | Muss |
-| F-43 | Das Plugin loggt Sync-Aktivitäten in eine interne Log-Datei (optional aktivierbar) | Kann |
+| ID   | Anforderung                                                                                    | Priorität |
+| ---- | ---------------------------------------------------------------------------------------------- | --------- |
+| F-40 | Bei Rate-Limiting (429) wartet das Plugin die `Retry-After`-Zeit ab und wiederholt den Request | Muss      |
+| F-41 | Netzwerkfehler werden dem Nutzer verständlich kommuniziert                                     | Muss      |
+| F-42 | Bei einem fehlgeschlagenen Push bleibt die Obsidian-Datei unverändert                          | Muss      |
+| F-43 | Das Plugin loggt Sync-Aktivitäten in eine interne Log-Datei (optional aktivierbar)             | Kann      |
 
 ---
 
 ## 4. Nicht-Funktionale Anforderungen
 
-| ID | Anforderung |
-|---|---|
-| NF-01 | Der API-Key wird **nicht** im Klartext in einer versionierbaren Datei gespeichert |
-| NF-02 | Das Plugin funktioniert primär mit Self-Hosted-Instanzen; Cloud-Kompatibilität (`app.getoutline.com`) als Bonus |
-| NF-03 | Push-Operationen blockieren die Obsidian-UI nicht (asynchrone Ausführung mit Queue und Backoff bei 429) |
-| NF-04 | Das Plugin ist kompatibel mit Obsidian ab Version 1.0 (`minAppVersion: "1.0.0"` in `manifest.json`) |
-| NF-05 | Kein externes npm-Paket außer dem Obsidian Plugin-SDK – kein jQuery, kein React |
-| NF-06 | TypeScript mit striktem Typing (`strict: true`) |
-| NF-07 | **Store-Konformität:** Kein `eval()`, kein unsanitiertes `innerHTML`, keine externen CDN-Ressourcen |
+| ID    | Anforderung                                                                                                                                                        |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| NF-01 | Der API-Key wird **nicht** im Klartext in einer versionierbaren Datei gespeichert                                                                                  |
+| NF-02 | Das Plugin funktioniert primär mit Self-Hosted-Instanzen; Cloud-Kompatibilität (`app.getoutline.com`) als Bonus                                                    |
+| NF-03 | Push-Operationen blockieren die Obsidian-UI nicht (asynchrone Ausführung mit Queue und Backoff bei 429)                                                            |
+| NF-04 | Das Plugin ist kompatibel mit Obsidian ab Version 1.0 (`minAppVersion: "1.0.0"` in `manifest.json`)                                                                |
+| NF-05 | Kein externes npm-Paket außer dem Obsidian Plugin-SDK – kein jQuery, kein React                                                                                    |
+| NF-06 | TypeScript mit striktem Typing (`strict: true`)                                                                                                                    |
+| NF-07 | **Store-Konformität:** Kein `eval()`, kein unsanitiertes `innerHTML`, keine externen CDN-Ressourcen                                                                |
 | NF-08 | **Store-Konformität:** `manifest.json` enthält alle Pflichtfelder: `id`, `name`, `version`, `minAppVersion`, `description`, `author`, `authorUrl`, `isDesktopOnly` |
-| NF-09 | **Store-Konformität:** `README.md` mit Beschreibung, Voraussetzungen, Konfigurationsanleitung und Screenshots |
-| NF-10 | **Store-Konformität:** Lizenz-Datei (MIT) im Repository-Root |
-| NF-11 | **Store-Konformität:** Plugin-ID ist eindeutig in kebab-case (z.B. `obsidian-outline-sync`) |
+| NF-09 | **Store-Konformität:** `README.md` mit Beschreibung, Voraussetzungen, Konfigurationsanleitung und Screenshots                                                      |
+| NF-10 | **Store-Konformität:** Lizenz-Datei (MIT) im Repository-Root                                                                                                       |
+| NF-11 | **Store-Konformität:** Plugin-ID ist eindeutig in kebab-case (z.B. `obsidian-outline-sync`)                                                                        |
 
 ---
 
@@ -195,14 +203,14 @@ obsidian-outline-sync/
 
 ### 5.1 Outline API – Relevante Endpunkte
 
-| Endpunkt | Methode | Zweck |
-|---|---|---|
-| `POST /api/auth.info` | POST | API-Key validieren |
-| `POST /api/collections.list` | POST | Verfügbare Collections für Dropdown laden |
-| `POST /api/documents.create` | POST | Neues Dokument erstellen |
-| `POST /api/documents.update` | POST | Bestehendes Dokument aktualisieren |
-| `POST /api/documents.info` | POST | Dokument-Details abrufen |
-| `POST /api/attachments.create` | POST | Attachment-Upload initiieren |
+| Endpunkt                       | Methode | Zweck                                     |
+| ------------------------------ | ------- | ----------------------------------------- |
+| `POST /api/auth.info`          | POST    | API-Key validieren                        |
+| `POST /api/collections.list`   | POST    | Verfügbare Collections für Dropdown laden |
+| `POST /api/documents.create`   | POST    | Neues Dokument erstellen                  |
+| `POST /api/documents.update`   | POST    | Bestehendes Dokument aktualisieren        |
+| `POST /api/documents.info`     | POST    | Dokument-Details abrufen                  |
+| `POST /api/attachments.create` | POST    | Attachment-Upload initiieren              |
 
 > **Hinweis:** Die Outline API ist RPC-Style – **alle** Endpunkte sind `POST`-Requests mit JSON-Body und `Authorization: Bearer <API_KEY>` Header.
 
@@ -210,9 +218,9 @@ obsidian-outline-sync/
 
 ```yaml
 ---
-outline_id: "uuid-des-outline-dokuments"
-outline_collection_id: "uuid-der-collection"
-outline_last_synced: "2026-02-20T18:00:00Z"
+outline_id: 'uuid-des-outline-dokuments'
+outline_collection_id: 'uuid-der-collection'
+outline_last_synced: '2026-02-20T18:00:00Z'
 ---
 ```
 
@@ -258,10 +266,10 @@ Phase 3 (optional, hohe Komplexität)
 
 ## 8. Abhängigkeiten
 
-| Abhängigkeit | Version | Zweck |
-|---|---|---|
+| Abhängigkeit     | Version  | Zweck      |
+| ---------------- | -------- | ---------- |
 | `obsidian` (SDK) | `^1.0.0` | Plugin-API |
-| `typescript` | `^5.0` | Sprache |
-| `esbuild` | aktuell | Build-Tool |
+| `typescript`     | `^5.0`   | Sprache    |
+| `esbuild`        | aktuell  | Build-Tool |
 
 > Keine weiteren externen Abhängigkeiten. Die Outline API wird über den nativen `fetch`-API angesprochen.

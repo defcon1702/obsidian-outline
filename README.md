@@ -58,9 +58,9 @@ After the first push, the plugin writes metadata to the note's YAML frontmatter:
 
 ```yaml
 ---
-outline_id: "uuid-of-the-outline-document"
-outline_collection_id: "uuid-of-the-collection"
-outline_last_synced: "2026-02-20T18:00:00.000Z"
+outline_id: 'uuid-of-the-outline-document'
+outline_collection_id: 'uuid-of-the-collection'
+outline_last_synced: '2026-02-20T18:00:00.000Z'
 ---
 ```
 
@@ -99,14 +99,14 @@ npm install
 
 ### Available scripts
 
-| Script | Description |
-|---|---|
-| `npm run dev` | Build the plugin in watch mode (development) |
-| `npm run build` | Type-check and produce a production build |
-| `npm run test` | Run the test suite (Jest) |
-| `npm run sync` | Push a local folder to Outline via CLI (see above) |
-| `npm run format` | Format all files with Prettier |
-| `npm run format:check` | Check formatting without writing |
+| Script                 | Description                                             |
+| ---------------------- | ------------------------------------------------------- |
+| `npm run dev`          | Build the plugin in watch mode (development)            |
+| `npm run build`        | Type-check and produce a production build               |
+| `npm run test`         | Run the test suite (Jest)                               |
+| `npm run sync`         | Push a local folder to Outline via CLI (see above)      |
+| `npm run format`       | Format all files with Prettier                          |
+| `npm run format:check` | Check formatting without writing                        |
 | `npm run generate:api` | Regenerate the Outline API client from the OpenAPI spec |
 
 To test the plugin inside Obsidian, copy the build output to `<vault>/.obsidian/plugins/obsidian-outline-sync/` and enable it in Obsidian.

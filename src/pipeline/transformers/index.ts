@@ -1,16 +1,16 @@
 export {
-	FrontmatterTransformer,
-	parseFrontmatter,
-	stripFrontmatter,
-	getOutlineMeta,
-} from "./frontmatter";
-export type { OutlineFrontmatter } from "./frontmatter";
+  FrontmatterTransformer,
+  parseFrontmatter,
+  stripFrontmatter,
+  getOutlineMeta,
+} from './frontmatter';
+export type { OutlineFrontmatter } from './frontmatter';
 
-export { CalloutTransformer, convertCallouts } from "./callouts";
+export { CalloutTransformer, convertCallouts } from './callouts';
 
-export { WikiLinkTransformer, replaceWikiLinks, resolveWikiLinkMarkers } from "./wikiLinks";
-export type { WikiLinkResolver, WikiLinkOptions } from "./wikiLinks";
+export { WikiLinkTransformer, replaceWikiLinks, resolveWikiLinkMarkers } from './wikiLinks';
+export type { WikiLinkResolver, WikiLinkOptions } from './wikiLinks';
 
-export { ImageDetector, detectImages } from "./images";
+export { ImageDetector, detectImages } from './images';
 
-export { TocRemover, removeToc } from "./tocRemover";
+export { TocRemover, removeToc } from './tocRemover';

@@ -1,10 +1,10 @@
 {
-	"id": "obsidian-outline-sync",
-	"name": "Outline Sync",
-	"version": "1.0.0",
-	"minAppVersion": "1.0.0",
-	"description": "Push Obsidian notes and folders to your Outline knowledge base.",
-	"author": "defcon1702",
-	"authorUrl": "https://github.com/defcon1702",
-	"isDesktopOnly": true
+  "id": "obsidian-outline-sync",
+  "name": "Outline Sync",
+  "version": "1.0.0",
+  "minAppVersion": "1.0.0",
+  "description": "Push Obsidian notes and folders to your Outline knowledge base.",
+  "author": "defcon1702",
+  "authorUrl": "https://github.com/defcon1702",
+  "isDesktopOnly": true
 }
