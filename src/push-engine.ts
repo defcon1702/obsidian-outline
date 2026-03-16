@@ -5,6 +5,7 @@ import { syncDocument, syncFolder } from './sync';
 import type { SyncOptions } from './sync';
 import { createObsidianSyncEnv, buildWikiLinkResolver } from './adapters/obsidian';
 import { resolveConflict, resolveFolderConflictStrategy } from './plugin-ui/conflict-modal';
+import { SyncLogNotice } from './plugin-ui/sync-log-notice';
 import { getErrorMessage } from './utils/errors';
 
 export class PushEngine {
@@ -71,25 +72,24 @@ export class PushEngine {
     const folderStrategy = await resolveFolderConflictStrategy(this.app);
     if (folderStrategy === 'cancel') return;
 
-    const notice = new Notice(`Pushing ${folder.name}…`, 0);
+    const log = new SyncLogNotice(`Pushing ${folder.name}…`);
+
     const options = this.buildOptions(targetCollection, folderStrategy);
     const env = createObsidianSyncEnv({
       app: this.app,
       api: this.client,
-      onProgress: (msg) => notice.setMessage(msg),
+      onProgress: (msg) => log.appendLine(msg),
     });
 
     try {
       const result = await syncFolder(options, env, folder.path);
-      notice.hide();
-      const msg =
-        result.failed > 0
-          ? `✓ ${result.success} pushed, ✗ ${result.failed} failed`
-          : `✓ ${result.success} file(s) successfully pushed`;
-      new Notice(msg, 6000);
+      const ok = result.failed === 0;
+      const summary = ok
+        ? `✓ ${result.success} file(s) successfully pushed`
+        : `✓ ${result.success} pushed, ✗ ${result.failed} failed`;
+      log.finish(summary, ok);
     } catch (e) {
-      notice.hide();
-      new Notice(`✗ Folder push failed: ${getErrorMessage(e)}`, 8000);
+      log.finish(`✗ Push failed: ${getErrorMessage(e)}`, false);
       console.error('[Outline Sync] pushFolder error:', e);
     }
   }
