@@ -133,6 +133,10 @@ Example `.gitignore` / sync exclusion:
 .obsidian/plugins/obsidian-outline-sync/data.json
 ```
 
+## Contributors
+
+- **[@matthias-feddersen](https://github.com/matthias-feddersen)** – Major refactor in v1.8.0: pipeline architecture, test suite, CLI runner, typed API client, callout fixes, and much more. Thank you!
+
 ## License
 
 MIT
