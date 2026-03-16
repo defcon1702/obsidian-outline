@@ -180,6 +180,39 @@ describe("syncFolder", () => {
 		expect(leafDoc.parentDocumentId).toBeDefined();
 	});
 
+	it("resolves cross-references between new documents in pass 2", async () => {
+		const api = makeFakeApi();
+		const env = makeEnv(api, {
+			"Alpha.md": "See [[Beta]] for details",
+			"Beta.md": "Back to [[Alpha]]",
+		});
+
+		await syncFolder(defaultOptions, env, "/root");
+
+		const alphaCreated = api.created.find((d) => d.title === "Alpha")!;
+		const betaCreated = api.created.find((d) => d.title === "Beta")!;
+
+		// Pass 1: both docs created but wiki links unresolved (no prior outline_id)
+		// Pass 2: markers resolved with the newly created document IDs
+		const alphaUpdate = api.updated.find((u) => u.id === alphaCreated.parentDocumentId || u.title === "Alpha");
+		const betaUpdate = api.updated.find((u) => u.id === betaCreated.parentDocumentId || u.title === "Beta");
+
+		// At least one update should have happened to resolve cross-refs
+		expect(api.updated.length).toBeGreaterThan(0);
+
+		// Find the final text for each doc (last update or created text)
+		const alphaFinal = api.updated.find((u) => u.title === "Alpha")?.text
+			?? alphaCreated.text;
+		const betaFinal = api.updated.find((u) => u.title === "Beta")?.text
+			?? betaCreated.text;
+
+		// Both should contain resolved links (full URLs, not markers or plain text)
+		expect(alphaFinal).toContain("https://example.com/doc/");
+		expect(betaFinal).toContain("https://example.com/doc/");
+		expect(alphaFinal).not.toContain("%%WIKILINK");
+		expect(betaFinal).not.toContain("%%WIKILINK");
+	});
+
 	it("real-world vault structure produces correct hierarchy", async () => {
 		const api = makeFakeApi();
 		const env = makeEnv(api, {

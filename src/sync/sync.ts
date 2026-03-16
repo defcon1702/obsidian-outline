@@ -1,4 +1,4 @@
-import { getOutlineMeta } from "../pipeline";
+import { getOutlineMeta, resolveWikiLinkMarkers } from "../pipeline";
 import { buildDocumentTree } from "../pipeline";
 import type { DocNode } from "../pipeline";
 import { convertContentToOutlineMarkdown } from "../convert";
@@ -37,7 +37,11 @@ export async function syncDocument(
 	const wikiResolver = env.getWikiResolver();
 	const { markdown, imageRefs } = convertContentToOutlineMarkdown(
 		rawContent,
-		{ removeToc: options.removeToc },
+		{
+			removeToc: options.removeToc,
+			outlineUrl: options.outlineUrl,
+			preserveUnresolved: options.preserveUnresolved,
+		},
 		fd.basename,
 		fd.path,
 		wikiResolver,
@@ -168,7 +172,7 @@ export async function syncDocument(
 		? { uploaded: imagesUploaded, total: imageRefs.length }
 		: undefined;
 
-	return { documentId, collectionId, action, imageStats };
+	return { documentId, collectionId, action, imageStats, finalMarkdown };
 }
 
 /**
@@ -210,10 +214,14 @@ export async function syncFolder(
 	}
 
 	const result: SyncResult = { success: 0, failed: 0, total: files.length };
+
+	const pass1Options: SyncOptions = { ...options, preserveUnresolved: true };
 	const envWithResolver: SyncEnv = {
 		...env,
 		getWikiResolver: () => wikiResolver,
 	};
+
+	const syncedDocs: { title: string; documentId: string; finalMarkdown: string }[] = [];
 
 	async function syncNode(node: DocNode, parentDocumentId: string | undefined, depth: number): Promise<void> {
 		const indent = "  ".repeat(depth);
@@ -227,10 +235,17 @@ export async function syncFolder(
 					? { ...fd, basename: node.title }
 					: fd;
 				try {
-					const res = await syncDocument(options, envWithResolver, effectiveFd, parentDocumentId);
+					const res = await syncDocument(pass1Options, envWithResolver, effectiveFd, parentDocumentId);
 					if (res) {
 						nextParentId = res.documentId;
 						result.success++;
+						if (res.finalMarkdown) {
+							syncedDocs.push({
+								title: effectiveFd.basename,
+								documentId: res.documentId,
+								finalMarkdown: res.finalMarkdown,
+							});
+						}
 						let detail = res.action;
 						if (res.imageStats) {
 							detail += ` (${res.imageStats.uploaded}/${res.imageStats.total} images)`;
@@ -280,6 +295,43 @@ export async function syncFolder(
 
 	for (const root of tree) {
 		await syncNode(root, undefined, 0);
+	}
+
+	// Pass 2: resolve any %%WIKILINK[target|display]%% markers left from pass 1.
+	// Build a complete resolver that includes all newly created documents.
+	const MARKER_RE = /%%WIKILINK\[/;
+	const docsWithMarkers = syncedDocs.filter((d) => MARKER_RE.test(d.finalMarkdown));
+
+	if (docsWithMarkers.length > 0) {
+		const completeMap = new Map<string, string>();
+		for (const d of syncedDocs) {
+			completeMap.set(d.title, d.documentId);
+		}
+		const completeResolver = (target: string) =>
+			wikiResolver(target) ?? completeMap.get(target) ?? null;
+
+		env.onProgress?.("Resolving cross-references…");
+		for (const doc of docsWithMarkers) {
+			const resolved = resolveWikiLinkMarkers(
+				doc.finalMarkdown,
+				completeResolver,
+				options.outlineUrl,
+			);
+			if (resolved !== doc.finalMarkdown) {
+				try {
+					await env.api.updateDocument({
+						id: doc.documentId,
+						title: doc.title,
+						text: resolved,
+						publish: true,
+					});
+					env.onProgress?.(`  ${doc.title}… links updated ✓`);
+				} catch (e) {
+					const msg = e instanceof Error ? e.message : String(e);
+					env.onProgress?.(`  ${doc.title}… link update ✗ ${msg}`);
+				}
+			}
+		}
 	}
 
 	return result;

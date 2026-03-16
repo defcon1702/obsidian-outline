@@ -10,6 +10,8 @@ export interface SyncOptions {
 	indexAsFolder: boolean;
 	/** Used when no UI (e.g. CLI); ignored when resolveConflict is provided. */
 	folderConflictStrategy: "overwrite" | "duplicate";
+	/** When true, unresolved wiki links are kept as markers for two-pass resolution. */
+	preserveUnresolved?: boolean;
 }
 
 export interface SyncResult {
@@ -23,6 +25,8 @@ export interface SyncDocumentResult {
 	collectionId: string;
 	action: "created" | "updated";
 	imageStats?: { uploaded: number; total: number };
+	/** Final markdown sent to Outline (used for two-pass wiki link resolution). */
+	finalMarkdown?: string;
 }
 
 export interface FileDescriptor {

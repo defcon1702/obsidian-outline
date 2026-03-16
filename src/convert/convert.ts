@@ -18,6 +18,8 @@ export type WikiLinkResolver = (target: string) => string | null;
 
 export interface ConvertContentOptions {
 	removeToc?: boolean;
+	outlineUrl?: string;
+	preserveUnresolved?: boolean;
 }
 
 export interface ConvertContentResult {
@@ -37,7 +39,11 @@ export function convertContentToOutlineMarkdown(
 		FrontmatterTransformer(),
 		...(options.removeToc ? [TocRemover()] : []),
 		ImageDetector(),
-		WikiLinkTransformer({ resolve: wikiLinkResolver }),
+		WikiLinkTransformer({
+			resolve: wikiLinkResolver,
+			outlineUrl: options.outlineUrl,
+			preserveUnresolved: options.preserveUnresolved,
+		}),
 		CalloutTransformer(),
 		NewlineNormalizer(),
 	];

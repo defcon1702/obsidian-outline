@@ -26,6 +26,7 @@ export interface ConvertResult {
 
 export interface ConvertOptions {
 	removeToc?: boolean;
+	outlineUrl?: string;
 }
 
 export async function convertToOutlineMarkdown(
@@ -42,7 +43,7 @@ export async function convertToOutlineMarkdown(
 		FrontmatterTransformer(),
 		...(options?.removeToc ? [TocRemover()] : []),
 		ImageDetector(),
-		WikiLinkTransformer({ resolve: wikiLinkResolver }),
+		WikiLinkTransformer({ resolve: wikiLinkResolver, outlineUrl: options?.outlineUrl }),
 		CalloutTransformer(),
 		NewlineNormalizer(),
 	];
@@ -61,12 +62,13 @@ export async function resolveWikiLinksWithCache(
 	app: App,
 	content: string,
 	fileContentCache: Map<string, string>,
+	outlineUrl?: string,
 ): Promise<string> {
 	const resolver = buildWikiLinkResolverWithCache(app, fileContentCache);
 
 	const ctx = createContext(content);
 	const result = runPipeline(ctx, [
-		WikiLinkTransformer({ resolve: resolver }),
+		WikiLinkTransformer({ resolve: resolver, outlineUrl }),
 	]);
 
 	return result.content;

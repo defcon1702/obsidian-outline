@@ -12,12 +12,14 @@ const knownDocs: Record<string, string> = {
 	"Other Note": "uuid-other",
 };
 
+const outlineUrl = "https://outline.example.com";
+
 function fullPipeline(content: string) {
 	const ctx = createContext(content, "Test File", "folder/Test File.md");
 	return runPipeline(ctx, [
 		FrontmatterTransformer(),
 		ImageDetector(),
-		WikiLinkTransformer({ resolve: (t) => knownDocs[t] ?? null }),
+		WikiLinkTransformer({ resolve: (t) => knownDocs[t] ?? null, outlineUrl }),
 		CalloutTransformer(),
 	]);
 }
@@ -56,7 +58,7 @@ describe("full pipeline integration", () => {
 		expect(result.content).not.toContain("---");
 		expect(result.content).not.toContain("title: My Note");
 
-		expect(result.content).toContain("[Other Note](doc:uuid-other)");
+		expect(result.content).toContain("[Other Note](https://outline.example.com/doc/uuid-other)");
 
 		expect(result.content).toContain(":::warning");
 		expect(result.content).toContain("Heads up");
@@ -148,7 +150,7 @@ describe("full pipeline integration", () => {
 		const result = fullPipeline(input);
 
 		expect(result.content).not.toContain("outline_id");
-		expect(result.content).toContain("[Other Note](doc:uuid-other)");
+		expect(result.content).toContain("[Other Note](https://outline.example.com/doc/uuid-other)");
 		expect(result.content).toContain(":::tip");
 		expect(result.content).toContain("Pro tip");
 		expect(result.content).toContain("Use the pipeline!");
