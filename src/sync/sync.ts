@@ -2,6 +2,7 @@ import { getOutlineMeta, resolveWikiLinkMarkers } from "../pipeline";
 import { buildDocumentTree } from "../pipeline";
 import type { DocNode } from "../pipeline";
 import { convertContentToOutlineMarkdown } from "../convert";
+import { getErrorMessage } from "../utils/errors";
 import type { SyncOptions, SyncEnv, SyncResult, SyncDocumentResult, ConflictResolution } from "./types";
 
 async function findAvailableTitle(
@@ -254,7 +255,7 @@ export async function syncFolder(
 					}
 				} catch (e) {
 					result.failed++;
-					const msg = e instanceof Error ? e.message : String(e);
+					const msg = getErrorMessage(e);
 					env.onProgress?.(`${indent}${prefix}${node.title}… ✗ ${msg}`);
 					console.error(`[Outline Sync] Failed to push "${fd.path}":`, e);
 				}
@@ -283,7 +284,7 @@ export async function syncFolder(
 					}
 				}
 			} catch (e) {
-				const msg = e instanceof Error ? e.message : String(e);
+				const msg = getErrorMessage(e);
 				env.onProgress?.(`${indent}${prefix}${node.title}… ✗ ${msg}`);
 				console.error(`[Outline Sync] Failed to create folder "${node.title}":`, e);
 			}
@@ -327,7 +328,7 @@ export async function syncFolder(
 					});
 					env.onProgress?.(`  ${doc.title}… links updated ✓`);
 				} catch (e) {
-					const msg = e instanceof Error ? e.message : String(e);
+					const msg = getErrorMessage(e);
 					env.onProgress?.(`  ${doc.title}… link update ✗ ${msg}`);
 				}
 			}

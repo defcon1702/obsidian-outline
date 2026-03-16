@@ -1,23 +1,9 @@
 import * as fs from "fs";
 import * as path from "path";
-import { getOutlineMeta } from "../pipeline";
+import { getContentType } from "../utils/content-type";
+import { buildWikiMapFromFiles } from "../utils/wiki-map";
 import type { SyncEnv, FileDescriptor, ResolvedImage, ImageRefLike } from "../sync";
 import type { IOutlineApi } from "../outline-api/types";
-
-const CONTENT_TYPE_MAP: Record<string, string> = {
-	png: "image/png",
-	jpg: "image/jpeg",
-	jpeg: "image/jpeg",
-	gif: "image/gif",
-	webp: "image/webp",
-	svg: "image/svg+xml",
-	bmp: "image/bmp",
-};
-
-function getContentType(filePath: string): string {
-	const ext = path.extname(filePath).slice(1).toLowerCase();
-	return CONTENT_TYPE_MAP[ext] ?? "application/octet-stream";
-}
 
 function collectMarkdownFiles(dir: string): string[] {
 	const files: string[] = [];
@@ -121,15 +107,7 @@ export function createNodeSyncEnv(options: NodeSyncEnvOptions): SyncEnv {
 		},
 		getWikiResolver(filesWithContent) {
 			if (filesWithContent) {
-				wikiMap = new Map();
-				for (const { path: filePath, content } of filesWithContent) {
-					const meta = getOutlineMeta(content);
-					if (meta.outline_id) {
-						const name = path.basename(filePath, ".md");
-						wikiMap.set(name, meta.outline_id);
-					}
-				}
-				return (target: string) => wikiMap.get(target) ?? null;
+				wikiMap = buildWikiMapFromFiles(filesWithContent);
 			}
 			return (target: string) => wikiMap.get(target) ?? null;
 		},
@@ -142,7 +120,7 @@ export function createNodeSyncEnv(options: NodeSyncEnvOptions): SyncEnv {
 				placeholder: imageRef.placeholder,
 				pathOrKey: imgPath,
 				fileName,
-				contentType: getContentType(imgPath),
+				contentType: getContentType(path.extname(imgPath).slice(1)),
 			};
 		},
 		async readImageBytes(pathOrKey) {

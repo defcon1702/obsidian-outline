@@ -3,9 +3,9 @@ import { OutlineClient } from "./outline-client";
 import { OutlineSyncSettings } from "./settings";
 import { syncDocument, syncFolder } from "./sync";
 import type { SyncOptions } from "./sync";
-import { createObsidianSyncEnv } from "./adapters/obsidian";
-import { buildWikiLinkResolver } from "./markdown-converter";
+import { createObsidianSyncEnv, buildWikiLinkResolver } from "./adapters/obsidian";
 import { resolveConflict, resolveFolderConflictStrategy } from "./plugin-ui/conflict-modal";
+import { getErrorMessage } from "./utils/errors";
 
 export class PushEngine {
 	private app: App;
@@ -56,8 +56,7 @@ export class PushEngine {
 			}
 		} catch (e) {
 			notice.hide();
-			const msg = e instanceof Error ? e.message : String(e);
-			new Notice(`✗ Push failed: ${msg}`, 8000);
+			new Notice(`✗ Push failed: ${getErrorMessage(e)}`, 8000);
 			console.error("[Outline Sync] pushFile error:", e);
 		}
 	}
@@ -87,8 +86,7 @@ export class PushEngine {
 			new Notice(msg, 6000);
 		} catch (e) {
 			notice.hide();
-			const msg = e instanceof Error ? e.message : String(e);
-			new Notice(`✗ Folder push failed: ${msg}`, 8000);
+			new Notice(`✗ Folder push failed: ${getErrorMessage(e)}`, 8000);
 			console.error("[Outline Sync] pushFolder error:", e);
 		}
 	}

@@ -1,9 +1,14 @@
 import type { TransformerPlugin, TransformContext, ImageRef } from "../types";
 
-const EMBEDDED_IMAGE_WIKI_REGEX =
-	/!\[\[([^\]|]+\.(png|jpg|jpeg|gif|webp|svg|bmp))(?:\|[^\]]*)?\]\]/gi;
-const EMBEDDED_IMAGE_MD_REGEX =
-	/!\[([^\]]*)\]\(([^)]+\.(png|jpg|jpeg|gif|webp|svg|bmp))\)/gi;
+const IMAGE_EXTENSIONS = "png|jpg|jpeg|gif|webp|svg|bmp";
+const EMBEDDED_IMAGE_WIKI_REGEX = new RegExp(
+	`!\\[\\[([^\\]|]+\\.(${IMAGE_EXTENSIONS}))(?:\\|[^\\]]*)?\\]\\]`,
+	"gi",
+);
+const EMBEDDED_IMAGE_MD_REGEX = new RegExp(
+	`!\\[([^\\]]*)\\]\\(([^)]+\\.(${IMAGE_EXTENSIONS}))\\)`,
+	"gi",
+);
 
 export function detectImages(content: string): {
 	content: string;

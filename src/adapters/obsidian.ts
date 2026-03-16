@@ -1,25 +1,13 @@
-import { App, TFile, TFolder } from "obsidian";
-import { getOutlineMeta } from "../pipeline";
+import { App, TFile, TFolder, Vault } from "obsidian";
+import { getOutlineMeta, type WikiLinkResolver } from "../pipeline";
 import { updateOutlineFrontmatter } from "../frontmatter";
+import { getContentType } from "../utils/content-type";
+import { buildWikiMapFromFiles } from "../utils/wiki-map";
 import type { SyncEnv, FileDescriptor, ResolvedImage, ImageRefLike } from "../sync";
 import type { IOutlineApi } from "../outline-api/types";
 
 interface ObsidianFd extends FileDescriptor {
 	_file: TFile;
-}
-
-const CONTENT_TYPE_MAP: Record<string, string> = {
-	png: "image/png",
-	jpg: "image/jpeg",
-	jpeg: "image/jpeg",
-	gif: "image/gif",
-	webp: "image/webp",
-	svg: "image/svg+xml",
-	bmp: "image/bmp",
-};
-
-function getContentType(ext: string): string {
-	return CONTENT_TYPE_MAP[ext.toLowerCase()] ?? "application/octet-stream";
 }
 
 function collectMarkdownFiles(folder: TFolder): TFile[] {
@@ -32,6 +20,22 @@ function collectMarkdownFiles(folder: TFolder): TFile[] {
 		}
 	}
 	return files;
+}
+
+export function buildWikiLinkResolver(app: App): WikiLinkResolver {
+	return (linkTarget: string) => {
+		const targetFile = app.metadataCache.getFirstLinkpathDest(linkTarget, "");
+		if (targetFile instanceof TFile) {
+			const cachedContent = (
+				app.vault as Vault & { readCache?: Map<string, string> }
+			).readCache?.get(targetFile.path);
+			if (cachedContent) {
+				const meta = getOutlineMeta(cachedContent);
+				if (meta.outline_id) return meta.outline_id;
+			}
+		}
+		return null;
+	};
 }
 
 export interface ObsidianSyncEnvOptions {
@@ -75,14 +79,7 @@ export function createObsidianSyncEnv(options: ObsidianSyncEnvOptions): SyncEnv 
 		},
 		getWikiResolver(filesWithContent) {
 			if (filesWithContent) {
-				wikiMap = new Map();
-				for (const { path: filePath, content } of filesWithContent) {
-					const meta = getOutlineMeta(content);
-					if (meta.outline_id) {
-						const name = filePath.replace(/\.md$/, "").split("/").pop() ?? "";
-						wikiMap.set(name, meta.outline_id);
-					}
-				}
+				wikiMap = buildWikiMapFromFiles(filesWithContent);
 				return (target: string) => wikiMap.get(target) ?? null;
 			}
 			if (getWikiResolverForSingleFile) {

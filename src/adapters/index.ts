@@ -1,2 +1,6 @@
 export { createNodeSyncEnv, type NodeSyncEnvOptions } from "./node";
-export { createObsidianSyncEnv, type ObsidianSyncEnvOptions } from "./obsidian";
+export {
+	createObsidianSyncEnv,
+	buildWikiLinkResolver,
+	type ObsidianSyncEnvOptions,
+} from "./obsidian";

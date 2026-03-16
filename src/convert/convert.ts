@@ -9,12 +9,12 @@ import {
 	WikiLinkTransformer,
 	ImageDetector,
 	TocRemover,
-	NewlineNormalizer,
 	type ImageRef,
+	type WikiLinkResolver,
 	type TransformerInstance,
 } from "../pipeline";
 
-export type WikiLinkResolver = (target: string) => string | null;
+export type { WikiLinkResolver };
 
 export interface ConvertContentOptions {
 	removeToc?: boolean;
@@ -45,7 +45,6 @@ export function convertContentToOutlineMarkdown(
 			preserveUnresolved: options.preserveUnresolved,
 		}),
 		CalloutTransformer(),
-		NewlineNormalizer(),
 	];
 	const result = runPipeline(ctx, transformers);
 	const imageRefs =
